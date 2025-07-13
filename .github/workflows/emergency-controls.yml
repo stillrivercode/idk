@@ -1,0 +1,481 @@
+name: Emergency Controls
+
+# Centralized timeout configuration
+env:
+  EMERGENCY_TIMEOUT_MINUTES: 10
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Emergency action to perform'
+        required: true
+        type: choice
+        options:
+          - emergency-stop
+          - resume-operations
+          - maintenance-mode-on
+          - maintenance-mode-off
+          - circuit-breaker-reset
+          - cost-limit-override
+      reason:
+        description: 'Reason for emergency action'
+        required: true
+        type: string
+      override_cost_limit:
+        description: 'New temporary cost limit (for cost-limit-override only)'
+        required: false
+        type: string
+        default: ''
+
+# Security controls - only repository admins should trigger this
+permissions:
+  contents: read
+
+jobs:
+  verify-authorization:
+    runs-on: ubuntu-latest
+    outputs:
+      authorized: ${{ steps.auth-check.outputs.authorized }}
+    steps:
+      - name: Check authorization # nosec
+        id: auth-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          # Check if the triggering user has admin permissions
+          USER_PERMISSION=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$GITHUB_ACTOR/permission" --jq '.permission')
+
+          if [[ "$USER_PERMISSION" == "admin" ]]; then
+            echo "✅ User $GITHUB_ACTOR has admin permissions"
+            echo "authorized=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ User $GITHUB_ACTOR does not have admin permissions (permission: $USER_PERMISSION)"
+            echo "Emergency controls require admin access"
+            echo "authorized=false" >> $GITHUB_OUTPUT
+          fi
+
+  emergency-action:
+    needs: verify-authorization
+    if: needs.verify-authorization.outputs.authorized == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(env.EMERGENCY_TIMEOUT_MINUTES) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate inputs # nosec
+        env:
+          ACTION_INPUT: ${{ inputs.action }}
+          REASON_INPUT: ${{ inputs.reason }}
+          COST_LIMIT_INPUT: ${{ inputs.override_cost_limit }}
+        run: |
+          echo "🔍 Validating emergency action inputs..."
+
+          # Validate action
+          case "$ACTION_INPUT" in
+            emergency-stop|resume-operations|maintenance-mode-on|maintenance-mode-off|circuit-breaker-reset|cost-limit-override)
+              echo "✅ Valid action: $ACTION_INPUT"
+              ;;
+            *)
+              echo "❌ Invalid action: $ACTION_INPUT"
+              echo "Valid actions: emergency-stop, resume-operations, maintenance-mode-on, maintenance-mode-off, circuit-breaker-reset, cost-limit-override"
+              exit 1
+              ;;
+          esac
+
+          # Validate reason (must be non-empty and reasonable length)
+          if [[ -z "$REASON_INPUT" ]]; then
+            echo "❌ Reason cannot be empty"
+            exit 1
+          fi
+
+          if [[ ${#REASON_INPUT} -lt 10 ]]; then
+            echo "❌ Reason must be at least 10 characters long"
+            exit 1
+          fi
+
+          if [[ ${#REASON_INPUT} -gt 500 ]]; then
+            echo "❌ Reason must be less than 500 characters"
+            exit 1
+          fi
+
+          # Validate cost limit override if provided
+          if [[ "$ACTION_INPUT" == "cost-limit-override" ]]; then
+            if [[ -z "$COST_LIMIT_INPUT" ]]; then
+              echo "❌ Cost limit override requires override_cost_limit parameter"
+              exit 1
+            fi
+
+            # Check if it's a valid number
+            if ! [[ "$COST_LIMIT_INPUT" =~ ^[0-9]+(\.[0-9]{1,2})?$ ]]; then
+              echo "❌ Cost limit must be a valid number (e.g., 100, 250.50)"
+              exit 1
+            fi
+
+            # Check reasonable bounds (between $1 and $10,000)
+            if (( $(echo "$COST_LIMIT_INPUT < 1" | bc -l) )); then
+              echo "❌ Cost limit must be at least \$1"
+              exit 1
+            fi
+
+            if (( $(echo "$COST_LIMIT_INPUT > 10000" | bc -l) )); then
+              echo "❌ Cost limit cannot exceed \$10,000 for safety"
+              exit 1
+            fi
+
+            echo "✅ Valid cost limit: \$$COST_LIMIT_INPUT"
+          fi
+
+          echo "✅ All inputs validated successfully"
+
+      - name: Record emergency action # nosec
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ACTION_INPUT: ${{ inputs.action }}
+          REASON_INPUT: ${{ inputs.reason }}
+        run: |
+          # Log the emergency action
+          TIMESTAMP=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          LOG_ENTRY="$TIMESTAMP,$GITHUB_ACTOR,$ACTION_INPUT,$REASON_INPUT"
+
+          # Get existing log
+          EMERGENCY_LOG=$(gh variable get EMERGENCY_LOG --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "")
+
+          # Append new entry (keep last 50 entries)
+          if [[ -n "$EMERGENCY_LOG" ]]; then
+            NEW_LOG="$EMERGENCY_LOG\n$LOG_ENTRY"
+            NEW_LOG=$(echo -e "$NEW_LOG" | tail -50)
+          else
+            NEW_LOG="$LOG_ENTRY"
+          fi
+
+          gh variable set EMERGENCY_LOG --body "$NEW_LOG" --repo "$GITHUB_REPOSITORY"
+
+          echo "🚨 Emergency action logged: $ACTION_INPUT"
+          echo "👤 Triggered by: $GITHUB_ACTOR"
+          echo "📝 Reason: $REASON_INPUT"
+          echo "⏰ Timestamp: $TIMESTAMP"
+
+      - name: Execute Emergency Stop # nosec
+        if: inputs.action == 'emergency-stop'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "🚨 ACTIVATING EMERGENCY STOP"
+          echo "All AI workflows will be immediately halted"
+
+          # Set emergency stop flag
+          gh variable set EMERGENCY_STOP_ENABLED --body "true" --repo "$GITHUB_REPOSITORY"
+
+          # Open circuit breaker
+          gh variable set AI_CIRCUIT_STATE --body "OPEN" --repo "$GITHUB_REPOSITORY"
+          gh variable set AI_CIRCUIT_LAST_FAILURE --body "$(date +%s)" --repo "$GITHUB_REPOSITORY"
+
+          # Cancel any running AI workflows
+          echo "Checking for running AI workflows to cancel..."
+
+          # Get running workflows
+          RUNNING_WORKFLOWS=$(gh run list --status in_progress --json workflowName,databaseId --jq '.[] | select(.workflowName | test("AI|ai-")) | .databaseId')
+
+          if [[ -n "$RUNNING_WORKFLOWS" ]]; then
+            echo "Cancelling running AI workflows:"
+            echo "$RUNNING_WORKFLOWS" | while read -r run_id; do
+              if [[ -n "$run_id" ]]; then
+                echo "  Cancelling run ID: $run_id"
+                gh run cancel "$run_id" || echo "    Failed to cancel run $run_id"
+              fi
+            done
+          else
+            echo "No running AI workflows found"
+          fi
+
+          echo "✅ Emergency stop activated successfully"
+
+      - name: Resume Operations # nosec
+        if: inputs.action == 'resume-operations'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "✅ RESUMING NORMAL OPERATIONS"
+
+          # Clear emergency stop
+          gh variable set EMERGENCY_STOP_ENABLED --body "false" --repo "$GITHUB_REPOSITORY"
+
+          # Reset circuit breaker
+          gh variable set AI_CIRCUIT_STATE --body "CLOSED" --repo "$GITHUB_REPOSITORY"
+          gh variable set AI_CIRCUIT_FAILURES --body "0" --repo "$GITHUB_REPOSITORY"
+
+          # Clear maintenance mode
+          gh variable set MAINTENANCE_MODE --body "false" --repo "$GITHUB_REPOSITORY"
+
+          echo "✅ Normal operations resumed"
+          echo "All AI workflows are now enabled"
+
+      - name: Enable Maintenance Mode # nosec
+        if: inputs.action == 'maintenance-mode-on'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "🔧 ENABLING MAINTENANCE MODE"
+
+          # Set maintenance mode
+          gh variable set MAINTENANCE_MODE --body "true" --repo "$GITHUB_REPOSITORY"
+
+          # Optionally open circuit breaker for extra safety
+          gh variable set AI_CIRCUIT_STATE --body "OPEN" --repo "$GITHUB_REPOSITORY"
+          gh variable set AI_CIRCUIT_LAST_FAILURE --body "$(date +%s)" --repo "$GITHUB_REPOSITORY"
+
+          echo "✅ Maintenance mode enabled"
+          echo "AI workflows are disabled for maintenance"
+
+      - name: Disable Maintenance Mode # nosec
+        if: inputs.action == 'maintenance-mode-off'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "✅ DISABLING MAINTENANCE MODE"
+
+          # Clear maintenance mode
+          gh variable set MAINTENANCE_MODE --body "false" --repo "$GITHUB_REPOSITORY"
+
+          # Reset circuit breaker if it was opened for maintenance
+          CIRCUIT_STATE=$(gh variable get AI_CIRCUIT_STATE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "CLOSED")
+          if [[ "$CIRCUIT_STATE" == "OPEN" ]]; then
+            echo "Resetting circuit breaker after maintenance"
+            gh variable set AI_CIRCUIT_STATE --body "CLOSED" --repo "$GITHUB_REPOSITORY"
+            gh variable set AI_CIRCUIT_FAILURES --body "0" --repo "$GITHUB_REPOSITORY"
+          fi
+
+          echo "✅ Maintenance mode disabled"
+          echo "Normal operations resumed"
+
+      - name: Reset Circuit Breaker # nosec
+        if: inputs.action == 'circuit-breaker-reset'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "⚡ RESETTING CIRCUIT BREAKER"
+
+          # Get current state for logging
+          CURRENT_STATE=$(gh variable get AI_CIRCUIT_STATE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "UNKNOWN")
+          CURRENT_FAILURES=$(gh variable get AI_CIRCUIT_FAILURES --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+
+          echo "Current state: $CURRENT_STATE"
+          echo "Current failures: $CURRENT_FAILURES"
+
+          # Reset circuit breaker
+          gh variable set AI_CIRCUIT_STATE --body "CLOSED" --repo "$GITHUB_REPOSITORY"
+          gh variable set AI_CIRCUIT_FAILURES --body "0" --repo "$GITHUB_REPOSITORY"
+          gh variable set AI_CIRCUIT_LAST_FAILURE --body "0" --repo "$GITHUB_REPOSITORY"
+
+          echo "✅ Circuit breaker reset to CLOSED state"
+          echo "AI workflows can now operate normally"
+
+      - name: Override Cost Limits # nosec
+        if: inputs.action == 'cost-limit-override'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          OVERRIDE_COST_LIMIT: ${{ inputs.override_cost_limit }}
+        run: |
+          echo "💰 OVERRIDING COST LIMITS"
+
+          if [[ -z "$OVERRIDE_COST_LIMIT" ]]; then
+            echo "❌ No override cost limit specified"
+            exit 1
+          fi
+
+          # Get current limits for logging
+          CURRENT_DAILY=$(gh variable get MAX_DAILY_COST --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "50")
+          CURRENT_MONTHLY=$(gh variable get MAX_MONTHLY_COST --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "500")
+
+          echo "Current daily limit: \$$CURRENT_DAILY"
+          echo "Current monthly limit: \$$CURRENT_MONTHLY"
+          echo "New override limit: \$$OVERRIDE_COST_LIMIT"
+
+          # Set override limits (apply to both daily and monthly for simplicity)
+          gh variable set MAX_DAILY_COST --body "$OVERRIDE_COST_LIMIT" --repo "$GITHUB_REPOSITORY"
+          gh variable set MAX_MONTHLY_COST --body "$OVERRIDE_COST_LIMIT" --repo "$GITHUB_REPOSITORY"
+
+          # Set a flag to indicate this is a temporary override
+          gh variable set COST_LIMIT_OVERRIDE --body "true" --repo "$GITHUB_REPOSITORY"
+          gh variable set COST_LIMIT_OVERRIDE_TIMESTAMP --body "$(date +%s)" --repo "$GITHUB_REPOSITORY"
+          gh variable set COST_LIMIT_ORIGINAL_DAILY --body "$CURRENT_DAILY" --repo "$GITHUB_REPOSITORY"
+          gh variable set COST_LIMIT_ORIGINAL_MONTHLY --body "$CURRENT_MONTHLY" --repo "$GITHUB_REPOSITORY"
+
+          echo "✅ Cost limits temporarily overridden"
+          echo "⚠️  Remember to restore original limits after the emergency"
+
+      - name: Send status notification # nosec
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ACTION_INPUT: ${{ inputs.action }}
+          REASON_INPUT: ${{ inputs.reason }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          OVERRIDE_COST_LIMIT: ${{ inputs.override_cost_limit }}
+        run: |
+          # Create an issue to document the emergency action
+          ISSUE_TITLE="Emergency Action: $ACTION_INPUT"
+          # Create issue body
+          echo "## Emergency Action Taken" > issue-body.txt
+          echo "" >> issue-body.txt
+          echo "Action: $ACTION_INPUT" >> issue-body.txt
+          echo "Triggered by: $GITHUB_ACTOR" >> issue-body.txt
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> issue-body.txt
+          echo "Reason: $REASON_INPUT" >> issue-body.txt
+          echo "" >> issue-body.txt
+          echo "### Current System Status" >> issue-body.txt
+
+          # Add system status based on action
+          case "$ACTION_INPUT" in
+            "emergency-stop")
+              echo "- 🚨 Emergency Stop ACTIVE - All AI workflows halted" >> issue-body.txt
+              echo "- 🔴 Circuit breaker: OPEN" >> issue-body.txt
+              echo "- ⚠️  Manual intervention required to resume operations" >> issue-body.txt
+              ;;
+            "resume-operations")
+              echo "- ✅ Normal Operations RESUMED" >> issue-body.txt
+              echo "- 🟢 Circuit breaker: CLOSED" >> issue-body.txt
+              echo "- 🔄 All AI workflows enabled" >> issue-body.txt
+              ;;
+            "maintenance-mode-on")
+              echo "- 🔧 Maintenance Mode ENABLED" >> issue-body.txt
+              echo "- 🔴 AI workflows disabled for maintenance" >> issue-body.txt
+              echo "- 🛠️  System under maintenance" >> issue-body.txt
+              ;;
+            "maintenance-mode-off")
+              echo "- ✅ Maintenance Mode DISABLED" >> issue-body.txt
+              echo "- 🟢 Normal operations resumed" >> issue-body.txt
+              echo "- 🔄 AI workflows re-enabled" >> issue-body.txt
+              ;;
+            "circuit-breaker-reset")
+              echo "- ⚡ Circuit Breaker RESET" >> issue-body.txt
+              echo "- 🟢 State: CLOSED" >> issue-body.txt
+              echo "- 🔄 Failure counter reset to 0" >> issue-body.txt
+              ;;
+            "cost-limit-override")
+              echo "- 💰 Cost Limits OVERRIDDEN" >> issue-body.txt
+              echo "- 📈 New limit: \$$OVERRIDE_COST_LIMIT" >> issue-body.txt
+              echo "- ⚠️  Temporary override in effect" >> issue-body.txt
+              echo "- 🔄 Remember to restore original limits" >> issue-body.txt
+              ;;
+          esac
+
+          echo "" >> issue-body.txt
+          echo "### Next Steps" >> issue-body.txt
+          echo "" >> issue-body.txt
+          echo "Please review the system status and take any additional actions as needed." >> issue-body.txt
+          echo "If this was a temporary emergency action, remember to restore normal settings when appropriate." >> issue-body.txt
+          echo "" >> issue-body.txt
+          echo "### Emergency Log" >> issue-body.txt
+          echo "" >> issue-body.txt
+          echo "View recent emergency actions using the \`scripts/emergency-audit.sh\` script." >> issue-body.txt
+          echo "" >> issue-body.txt
+          echo "---" >> issue-body.txt
+          echo "*This issue was automatically created by the Emergency Controls workflow.*" >> issue-body.txt
+
+          # Create the issue
+          gh issue create \
+            --title "$ISSUE_TITLE" \
+            --body "$(cat issue-body.txt)" \
+            --label "emergency" \
+            --label "incident" \
+            --assignee "$GITHUB_ACTOR"
+
+      - name: Final status check # nosec
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "🔍 FINAL SYSTEM STATUS CHECK"
+          echo "=============================="
+
+          # Check all emergency-related variables
+          EMERGENCY_STOP=$(gh variable get EMERGENCY_STOP_ENABLED --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "false")
+          MAINTENANCE_MODE=$(gh variable get MAINTENANCE_MODE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "false")
+          CIRCUIT_STATE=$(gh variable get AI_CIRCUIT_STATE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "CLOSED")
+          CIRCUIT_FAILURES=$(gh variable get AI_CIRCUIT_FAILURES --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+
+          echo "Emergency Stop:    $EMERGENCY_STOP"
+          echo "Maintenance Mode:  $MAINTENANCE_MODE"
+          echo "Circuit State:     $CIRCUIT_STATE"
+          echo "Circuit Failures:  $CIRCUIT_FAILURES"
+
+          # Check cost override status
+          COST_OVERRIDE=$(gh variable get COST_LIMIT_OVERRIDE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "false")
+          if [[ "$COST_OVERRIDE" == "true" ]]; then
+            DAILY_LIMIT=$(gh variable get MAX_DAILY_COST --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "unknown")
+            echo "Cost Override:     ACTIVE (Daily: \$$DAILY_LIMIT)"
+          else
+            echo "Cost Override:     INACTIVE"
+          fi
+
+          echo "=============================="
+          echo "✅ Emergency action completed successfully"
+
+  unauthorized-access:
+    needs: verify-authorization
+    if: needs.verify-authorization.outputs.authorized == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log unauthorized access attempt # nosec
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          ACTION_INPUT: ${{ inputs.action }}
+          REASON_INPUT: ${{ inputs.reason }}
+        run: |
+          echo "🚨 UNAUTHORIZED ACCESS ATTEMPT"
+          echo "==============================="
+          echo "User: $GITHUB_ACTOR"
+          echo "Action: $ACTION_INPUT"
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "==============================="
+
+          # Log the attempt
+          TIMESTAMP=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          LOG_ENTRY="$TIMESTAMP,$GITHUB_ACTOR,UNAUTHORIZED_ACCESS,$ACTION_INPUT"
+
+          SECURITY_LOG=$(gh variable get SECURITY_LOG --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "")
+
+          if [[ -n "$SECURITY_LOG" ]]; then
+            NEW_LOG="$SECURITY_LOG\n$LOG_ENTRY"
+            NEW_LOG=$(echo -e "$NEW_LOG" | tail -100)
+          else
+            NEW_LOG="$LOG_ENTRY"
+          fi
+
+          gh variable set SECURITY_LOG --body "$NEW_LOG" --repo "$GITHUB_REPOSITORY"
+
+          # Create security incident issue
+          echo "Unauthorized access attempt detected" > security-issue.txt
+          echo "" >> security-issue.txt
+          echo "User: $GITHUB_ACTOR" >> security-issue.txt
+          echo "Attempted Action: $ACTION_INPUT" >> security-issue.txt
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> security-issue.txt
+          echo "Reason Provided: $REASON_INPUT" >> security-issue.txt
+          echo "" >> security-issue.txt
+          echo "This user attempted to access emergency controls but does not have admin permissions." >> security-issue.txt
+          echo "" >> security-issue.txt
+          echo "Please review this access attempt and take appropriate action." >> security-issue.txt
+
+          gh issue create \
+            --title "Security: Unauthorized Emergency Control Access" \
+            --body "$(cat security-issue.txt)" \
+            --label "security" \
+            --label "unauthorized-access"
+
+          echo "❌ Access denied - incident logged and reported"
+          exit 1

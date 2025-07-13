@@ -1,0 +1,161 @@
+name: Publish Shared Commands
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'shared-commands/**'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for commit analysis
+          token: ${{ secrets.GH_PAT }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./shared-commands
+
+      - name: Determine bump type
+        id: bump
+        run: |
+          # For push events, analyze recent commits affecting shared-commands
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Get the previous commit to compare against
+            PREVIOUS_SHA="${{ github.event.before }}"
+            CURRENT_SHA="${{ github.sha }}"
+            
+            echo "Analyzing commits from $PREVIOUS_SHA to $CURRENT_SHA"
+            
+            # Get all commit subjects and bodies for shared-commands in this push
+            COMMITS_CONTENT=$(git log --format="%s%n%b" $PREVIOUS_SHA..$CURRENT_SHA -- shared-commands/ || echo "")
+            
+            if [[ -z "$COMMITS_CONTENT" ]]; then
+              echo "No commits affecting shared-commands in this push. Using conventional-recommended-bump."
+              if ! BUMP_TYPE=$(./node_modules/.bin/conventional-recommended-bump -p angular 2>/dev/null); then
+                echo "conventional-recommended-bump failed, defaulting to patch"
+                BUMP_TYPE="patch"
+              fi
+            else
+              echo "Found commits affecting shared-commands:"
+              echo "$COMMITS_CONTENT"
+              
+              # Check for conventional commits that affect shared-commands
+              CONVENTIONAL_COMMITS=$(echo "$COMMITS_CONTENT" | grep -E "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?: " || true)
+            
+              if [[ -z "$CONVENTIONAL_COMMITS" ]]; then
+                echo "No conventional commits found for shared-commands. Defaulting to patch."
+                BUMP_TYPE="patch"
+              else
+                # Determine bump type from conventional commits (check in order of precedence)
+                # Check for breaking changes (both BREAKING CHANGE: and ! syntax)
+                if echo "$COMMITS_CONTENT" | grep -qE "(BREAKING CHANGE:|^[^:]+!:)"; then
+                  BUMP_TYPE="major"
+                  echo "Found BREAKING CHANGE or ! syntax"
+                elif echo "$CONVENTIONAL_COMMITS" | grep -qE "^feat(\(.+\))?: "; then
+                  BUMP_TYPE="minor"
+                  echo "Found feat commit"
+                else
+                  BUMP_TYPE="patch"
+                  echo "Found other conventional commit types (fix, docs, etc.)"
+                fi
+              fi
+            fi
+          else
+            # For manual dispatch, use conventional-recommended-bump
+            echo "Manual workflow dispatch, using conventional-recommended-bump"
+            if ! BUMP_TYPE=$(./node_modules/.bin/conventional-recommended-bump -p angular 2>/dev/null); then
+              echo "conventional-recommended-bump failed, defaulting to patch"
+              BUMP_TYPE="patch"
+            fi
+          fi
+
+          echo "BUMP_TYPE=$BUMP_TYPE" >> $GITHUB_ENV
+          echo "Determined bump type: $BUMP_TYPE"
+        working-directory: ./shared-commands
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          # Calculate next version based on bump type
+          case "${{ env.BUMP_TYPE }}" in
+            major)
+              NEXT_VERSION=$(npm version major --no-git-tag-version)
+              ;;
+            minor)
+              NEXT_VERSION=$(npm version minor --no-git-tag-version)
+              ;;
+            patch)
+              NEXT_VERSION=$(npm version patch --no-git-tag-version)
+              ;;
+            none)
+              echo "No version bump needed, skipping"
+              NEXT_VERSION=$CURRENT_VERSION
+              ;;
+            *)
+              echo "Unknown bump type: ${{ env.BUMP_TYPE }}"
+              exit 1
+              ;;
+          esac
+
+          # Remove 'v' prefix if present
+          NEXT_VERSION=${NEXT_VERSION#v}
+          echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
+
+          # Reset version back to current for now
+          npm version $CURRENT_VERSION --no-git-tag-version
+        working-directory: ./shared-commands
+
+      - name: Check if version is published
+        id: check_version
+        run: |
+          echo "Checking if version ${{ steps.next_version.outputs.next }} is already published..."
+          if npm view @stillrivercode/shared-commands@${{ steps.next_version.outputs.next }} version 2>/dev/null; then
+            echo "published=true" >> $GITHUB_OUTPUT
+            echo "Version ${{ steps.next_version.outputs.next }} is already published"
+          else
+            echo "published=false" >> $GITHUB_OUTPUT
+            echo "Version ${{ steps.next_version.outputs.next }} is not published, proceeding with release"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Increment version
+        if: steps.check_version.outputs.published == 'false'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          npm version ${{ env.BUMP_TYPE }} -m "chore(release): %s"
+        working-directory: ./shared-commands
+
+      - name: Run tests
+        if: steps.check_version.outputs.published == 'false'
+        run: npm test
+        working-directory: ./shared-commands
+
+      - name: Publish package
+        if: steps.check_version.outputs.published == 'false'
+        run: npm publish --access public
+        working-directory: ./shared-commands
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push changes
+        if: steps.check_version.outputs.published == 'false'
+        run: git push --follow-tags

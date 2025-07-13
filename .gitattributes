@@ -1,0 +1,43 @@
+# Exclude development-specific files from NPM package template exports
+
+# All internal development documentation
+dev-docs/ export-ignore
+
+# Template development infrastructure (Python-specific)
+agentic_workflow_template.egg-info/ export-ignore
+venv/ export-ignore
+src/ export-ignore
+pyproject.toml export-ignore
+
+# Development testing and validation
+tests/ export-ignore
+.pytest_cache/ export-ignore
+.ruff_cache/ export-ignore
+
+# Internal development metadata
+CONTRIBUTING.md export-ignore
+DEVELOPMENT.md export-ignore
+CLAUDE.dev.md export-ignore
+CLAUDE.md export-ignore
+GEMINI.md export-ignore
+MIGRATION.md export-ignore
+
+# Development-specific directories
+specs/ export-ignore
+user-stories/ export-ignore
+examples/ export-ignore
+
+# Generated files and temporary outputs
+*.json export-ignore
+*.txt export-ignore
+remaining_issues.md export-ignore
+security_issues.md export-ignore
+
+# Development workflows (keep only production AI workflows)
+.github/workflows/test.yml export-ignore
+.github/workflows/security.yml export-ignore
+
+# Configuration files used for development
+.gitattributes export-ignore
+open-source-config.yml export-ignore
+install.sh export-ignore

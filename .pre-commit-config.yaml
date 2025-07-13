@@ -1,0 +1,97 @@
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: mixed-line-ending
+
+  # Markdown formatting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+
+  # YAML formatting (npm-based)
+  - repo: local
+    hooks:
+      - id: yaml-lint
+        name: YAML Lint
+        entry: npx yaml-lint
+        language: node
+        files: \.(yml|yaml)$
+        additional_dependencies: [yaml-lint@^1.7.0]
+
+  # JavaScript/TypeScript linting and formatting
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: npx eslint --fix
+        language: node
+        files: \.(js|ts|jsx|tsx)$
+        exclude: \.eslintrc.*\.js$|.*\.config\.js$
+        additional_dependencies: [eslint@^8.0.0, eslint-plugin-security@^1.7.1]
+
+      - id: prettier
+        name: Prettier
+        entry: npx prettier --write
+        language: node
+        files: \.(js|ts|jsx|tsx|json|md|yml|yaml)$
+        additional_dependencies: [prettier@^3.0.0]
+
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Security linting (npm-based, manual execution for performance)
+  # Run manually with: pre-commit run --hook-stage manual eslint-security
+  - repo: local
+    hooks:
+      - id: eslint-security
+        name: ESLint Security
+        entry: npx eslint --config .eslintrc.security.js
+        language: node
+        files: \.(js|ts|jsx|tsx)$
+        exclude: \.eslintrc.*\.js$|.*\.config\.js$
+        stages: [manual]
+        additional_dependencies: [eslint@^8.0.0, eslint-plugin-security@^1.7.1]
+
+  # NPM package-lock.json validation
+  # Ensures package-lock.json is up to date when package.json changes
+  - repo: local
+    hooks:
+      - id: npm-lock-check
+        name: NPM Lock File Check
+        entry: |
+          bash -c 'echo "Checking package-lock.json consistency..."; npm install --package-lock-only; if ! git diff --quiet --exit-code package-lock.json; then echo "Error: package-lock.json is out of sync with package.json."; echo "Please run npm install, then git add package-lock.json, and re-commit."; exit 1; fi'
+        language: system
+        files: package\.json$
+        pass_filenames: false
+
+  # Shell script tests
+  - repo: local
+    hooks:
+      - id: test-create-spec-issue
+        name: Test create-spec-issue.sh
+        entry: tests/test_create_spec_issue.sh
+        language: script
+        files: ^shared-commands/commands/create-spec-issue\.sh$
+      - id: test-roadmap
+        name: Test roadmap.sh
+        entry: tests/test_roadmap.sh
+        language: script
+        files: ^shared-commands/commands/roadmap\.sh$

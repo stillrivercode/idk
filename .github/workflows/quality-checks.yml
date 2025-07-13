@@ -1,0 +1,393 @@
+name: Quality Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  security-events: write
+
+jobs:
+  lint:
+    name: Lint Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run YAML lint
+        run: |
+          # Use npm-based yaml-lint
+          npm run lint:yaml
+
+      - name: Add ai-fix-lint label on failure
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "ai-fix-lint"
+
+      - name: Remove ai-fix-lint label on success
+        if: success() && github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" --remove-label "ai-fix-lint" || true
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Node.js tests
+        run: npm test
+
+      - name: Run shell script tests
+        run: |
+          if [ -d "tests" ]; then
+            EXIT_CODE=0
+            for script in tests/test_*.sh; do
+              if [ -f "$script" ]; then
+                echo "Running $script"
+                if bash "$script"; then
+                  echo "✅ $script passed"
+                else
+                  echo "❌ $script failed with exit code $?"
+                  EXIT_CODE=1
+                fi
+              fi
+            done
+            exit $EXIT_CODE
+          fi
+
+      - name: Validate YAML files
+        run: |
+          npm run lint:yaml
+
+      - name: Add ai-fix-tests label on failure
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "ai-fix-tests"
+
+      - name: Remove ai-fix-tests label on success
+        if: success() && github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" --remove-label "ai-fix-tests" || true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install security tools
+        run: |
+          npm install -g audit-ci
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run npm audit
+        run: |
+          npm audit --json > npm-audit-results.json || true
+
+      - name: Run audit-ci security check
+        run: |
+          npx audit-ci --report-type=json --output-file=audit-ci-results.json || true
+
+      - name: Run ESLint security scan
+        run: |
+          npm run lint:security > eslint-security-results.txt || true
+          # Convert to JSON format for consistency
+          echo '{"results": []}' > eslint-security-results.json
+          if [ -s eslint-security-results.txt ]; then
+            echo '{"results": ["ESLint security issues found - see eslint-security-results.txt"]}' > eslint-security-results.json
+          fi
+
+      - name: Check for security issues
+        id: security_check
+        run: |
+          # Check if any security issues were found
+          SECURITY_ISSUES=false
+          BLOCKING_ISSUES=false
+          MEDIUM_HIGH_COUNT=0
+
+          # Check npm audit results for medium/high severity issues
+          if [ -f npm-audit-results.json ] && [ -s npm-audit-results.json ]; then
+            AUDIT_COUNT=$(jq '.vulnerabilities | length' npm-audit-results.json 2>/dev/null || echo "0")
+            AUDIT_MEDIUM_HIGH=$(jq \
+              '[.vulnerabilities[] | select(.severity == "moderate" or \
+              .severity == "high" or .severity == "critical")] | length' \
+              npm-audit-results.json 2>/dev/null || echo "0")
+
+            if [ "$AUDIT_COUNT" -gt 0 ]; then
+              SECURITY_ISSUES=true
+              echo "npm audit found $AUDIT_COUNT total vulnerabilities ($AUDIT_MEDIUM_HIGH medium/high severity)"
+            fi
+
+            if [ "$AUDIT_MEDIUM_HIGH" -gt 0 ]; then
+              BLOCKING_ISSUES=true
+              MEDIUM_HIGH_COUNT=$((MEDIUM_HIGH_COUNT + AUDIT_MEDIUM_HIGH))
+            fi
+          fi
+
+          # Check audit-ci results (all vulnerabilities are considered medium/high)
+          if [ -f audit-ci-results.json ] && [ -s audit-ci-results.json ]; then
+            AUDIT_CI_COUNT=$(jq '. | length' audit-ci-results.json 2>/dev/null || echo "0")
+            if [ "$AUDIT_CI_COUNT" -gt 0 ]; then
+              SECURITY_ISSUES=true
+              BLOCKING_ISSUES=true
+              MEDIUM_HIGH_COUNT=$((MEDIUM_HIGH_COUNT + AUDIT_CI_COUNT))
+              echo "audit-ci found $AUDIT_CI_COUNT vulnerabilities (all considered medium/high)"
+            fi
+          fi
+
+          # Check ESLint security results
+          if [ -f eslint-security-results.txt ] && [ -s eslint-security-results.txt ]; then
+            # Count only actual error lines (lines with "error" in them)
+            ESLINT_SEC_COUNT=$(grep -c "error" eslint-security-results.txt || echo "0")
+            if [ "$ESLINT_SEC_COUNT" -gt 0 ]; then
+              SECURITY_ISSUES=true
+              # Treat all ESLint security issues as medium severity
+              BLOCKING_ISSUES=true
+              MEDIUM_HIGH_COUNT=$((MEDIUM_HIGH_COUNT + ESLINT_SEC_COUNT))
+              echo "ESLint security found $ESLINT_SEC_COUNT security issues (treated as medium severity)"
+            fi
+          fi
+
+          echo "security_issues=$SECURITY_ISSUES" >> $GITHUB_OUTPUT
+          echo "blocking_issues=$BLOCKING_ISSUES" >> $GITHUB_OUTPUT
+          echo "medium_high_count=$MEDIUM_HIGH_COUNT" >> $GITHUB_OUTPUT
+
+          if [ "$BLOCKING_ISSUES" = "true" ]; then
+            echo "🚨 BLOCKING: Found $MEDIUM_HIGH_COUNT medium/high severity security issues that will block PR merge"
+          elif [ "$SECURITY_ISSUES" = "true" ]; then
+            echo "⚠️  Security issues found (low severity only) - will add ai-fix-security label"
+          else
+            echo "✅ No security issues found - will remove ai-fix-security label if present"
+          fi
+
+      - name: Fail on medium/high severity security issues
+        if: steps.security_check.outputs.blocking_issues == 'true'
+        run: |
+          echo "❌ Security scan FAILED: Found ${{ steps.security_check.outputs.medium_high_count }} " \
+            "medium/high severity security issues"
+          echo ""
+          echo "🔒 Medium and high severity security issues block PR merges for safety."
+          echo "📋 The 'ai-fix-security' label has been added to trigger automated fixes."
+          echo "📦 Download the 'security-scan-results' artifact for detailed security reports."
+          echo ""
+          echo "To proceed:"
+          echo "1. Review the security issues in the PR comment below"
+          echo "2. Wait for AI-assisted fixes to be applied, or"
+          echo "3. Manually fix the security issues and push updates"
+          exit 1
+
+      - name: Upload security artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: |
+            *-results.json
+            *-results.txt
+          retention-days: 30
+
+      - name: Generate security report comment
+        if: always() && github.event_name == 'pull_request'
+        id: security_report
+        run: |
+          # Create a detailed security report for PR comment
+          COMMENT_BODY="## 🔒 Security Scan Results\n\n"
+
+          # Initialize counters
+          TOTAL_ISSUES=0
+          HAS_ISSUES=false
+
+          # Check npm audit results
+          if [ -f npm-audit-results.json ] && [ -s npm-audit-results.json ]; then
+            AUDIT_COUNT=$(jq '.vulnerabilities | length' npm-audit-results.json 2>/dev/null || echo "0")
+            if [ "$AUDIT_COUNT" -gt 0 ]; then
+              HAS_ISSUES=true
+              TOTAL_ISSUES=$((TOTAL_ISSUES + AUDIT_COUNT))
+              COMMENT_BODY+="\n### 🚨 npm audit - Vulnerable Dependencies ($AUDIT_COUNT found)\n\n"
+
+              # Add top 5 most critical vulnerabilities
+              jq -r '.vulnerabilities | to_entries[:5] | .[] |
+                "- **" + .value.severity + "**: " + .key +
+                "\n  - Versions: " + (.value.range // "unknown") +
+                "\n  - Via: " + (.value.via | if type == "array" then join(", ") else . end) + "\n"' \
+                npm-audit-results.json >> temp_audit.md 2>/dev/null || \
+                echo "- Error parsing npm audit results" >> temp_audit.md
+              COMMENT_BODY+="$(cat temp_audit.md)\n"
+
+              if [ "$AUDIT_COUNT" -gt 5 ]; then
+                COMMENT_BODY+="\n*... and $((AUDIT_COUNT - 5)) more vulnerabilities. See artifacts for full report.*\n"
+              fi
+            else
+              COMMENT_BODY+="\n### ✅ npm audit - Dependency Security\nNo vulnerable dependencies found.\n"
+            fi
+          else
+            COMMENT_BODY+="\n### ⚠️ npm audit - Dependency Security\nNo results file generated.\n"
+          fi
+
+          # Check audit-ci results
+          if [ -f audit-ci-results.json ] && [ -s audit-ci-results.json ]; then
+            AUDIT_CI_COUNT=$(jq '. | length' audit-ci-results.json 2>/dev/null || echo "0")
+            if [ "$AUDIT_CI_COUNT" -gt 0 ]; then
+              HAS_ISSUES=true
+              TOTAL_ISSUES=$((TOTAL_ISSUES + AUDIT_CI_COUNT))
+              COMMENT_BODY+="\n### 🚨 audit-ci Security Check ($AUDIT_CI_COUNT found)\n\n"
+
+              # Add audit-ci issues
+              jq -r '.[:5] | .[] |
+                "- **" + (.severity // "unknown") + "**: " + (.title // .name // "Unknown issue") +
+                "\n  - Package: " + (.module_name // .package // "unknown") +
+                "\n  - Versions: " + (.vulnerable_versions // .range // "unknown") + "\n"' \
+                audit-ci-results.json >> temp_audit_ci.md 2>/dev/null || \
+                echo "- Error parsing audit-ci results" >> temp_audit_ci.md
+              COMMENT_BODY+="$(cat temp_audit_ci.md)\n"
+
+              if [ "$AUDIT_CI_COUNT" -gt 5 ]; then
+                COMMENT_BODY+="\n*... and $((AUDIT_CI_COUNT - 5)) more issues. See artifacts for full report.*\n"
+              fi
+            else
+              COMMENT_BODY+="\n### ✅ audit-ci Security Check\nNo security issues found.\n"
+            fi
+          else
+            COMMENT_BODY+="\n### ⚠️ audit-ci Security Check\nNo results file generated.\n"
+          fi
+
+          # Check ESLint security results
+          if [ -f eslint-security-results.txt ] && [ -s eslint-security-results.txt ]; then
+            # Count only actual error lines (lines with "error" in them)
+            ESLINT_SEC_COUNT=$(grep -c "error" eslint-security-results.txt || echo "0")
+            if [ "$ESLINT_SEC_COUNT" -gt 0 ]; then
+              HAS_ISSUES=true
+              TOTAL_ISSUES=$((TOTAL_ISSUES + ESLINT_SEC_COUNT))
+              COMMENT_BODY+="\n### 🚨 ESLint Security Analysis ($ESLINT_SEC_COUNT found)\n\n"
+
+              # Add first 10 lines of ESLint security results
+              head -10 eslint-security-results.txt > temp_eslint_sec.md 2>/dev/null || \
+                echo "- Error reading ESLint security results" > temp_eslint_sec.md
+              COMMENT_BODY+="\`\`\`\n$(cat temp_eslint_sec.md)\n\`\`\`\n"
+
+              if [ "$ESLINT_SEC_COUNT" -gt 10 ]; then
+                COMMENT_BODY+="\n*... and $((ESLINT_SEC_COUNT - 10)) more issues. See artifacts for full report.*\n"
+              fi
+            else
+              COMMENT_BODY+="\n### ✅ ESLint Security Analysis\nNo security issues found.\n"
+            fi
+          else
+            COMMENT_BODY+="\n### ⚠️ ESLint Security Analysis\nNo results file generated.\n"
+          fi
+
+          # Add summary with blocking status
+          if [ "$HAS_ISSUES" = "true" ]; then
+            COMMENT_BODY+="\n---\n\n**Summary**: Found **$TOTAL_ISSUES total security issues** that need attention.\n"
+
+            # Check if there are blocking issues
+            BLOCKING_CHECK="${{ steps.security_check.outputs.blocking_issues }}"
+            MEDIUM_HIGH_COUNT="${{ steps.security_check.outputs.medium_high_count }}"
+
+            if [ "$BLOCKING_CHECK" = "true" ]; then
+              COMMENT_BODY+="\n🚨 **BLOCKING**: **$MEDIUM_HIGH_COUNT medium/high severity issues** will block PR merge until resolved.\n"
+              COMMENT_BODY+="\n🔒 **Security Policy**: Medium and high severity security issues must be fixed before merging.\n"
+            fi
+
+            COMMENT_BODY+="\n🏷️ **Automated Fix**: The \`ai-fix-security\` label will be added to trigger AI-assisted security fixes.\n"
+            COMMENT_BODY+="\n📦 **Full Reports**: Download the \`security-scan-results\` artifact for complete JSON reports.\n"
+          else
+            COMMENT_BODY+="\n---\n\n✅ **All security scans passed!** No issues found.\n"
+          fi
+
+          # Clean up temp files
+          rm -f temp_*.md
+
+          # Save comment body to output
+          echo "comment_body<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$COMMENT_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment security results on PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # Check if there's already a security comment and update it, or create new one
+          EXISTING_COMMENT_ID=$(gh api \
+            repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+            --jq '.[] | select(.body | startswith("## 🔒 Security Scan Results")) | .id' | head -1)
+
+          if [ -n "$EXISTING_COMMENT_ID" ]; then
+            # Update existing comment
+            gh api repos/${{ github.repository }}/issues/comments/$EXISTING_COMMENT_ID \
+              --method PATCH \
+              --field body="${{ steps.security_report.outputs.comment_body }}"
+            echo "Updated existing security comment #$EXISTING_COMMENT_ID"
+          else
+            # Create new comment
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --body "${{ steps.security_report.outputs.comment_body }}"
+            echo "Created new security scan comment"
+          fi
+
+      - name: Add ai-fix-security label on security issues
+        if: always() && github.event_name == 'pull_request' && steps.security_check.outputs.security_issues == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "ai-fix-security"
+
+          # Add additional context for blocking vs non-blocking issues
+          if [ "${{ steps.security_check.outputs.blocking_issues }}" = "true" ]; then
+            echo "Added ai-fix-security label - BLOCKING medium/high severity issues found"
+          else
+            echo "Added ai-fix-security label - non-blocking low severity issues found"
+          fi
+
+      - name: Remove ai-fix-security label on success
+        if: always() && github.event_name == 'pull_request' && steps.security_check.outputs.security_issues == 'false'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" --remove-label "ai-fix-security" || true

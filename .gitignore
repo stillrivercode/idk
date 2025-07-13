@@ -1,0 +1,169 @@
+# Environment files
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# package-lock.json (needed for CI cache)
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+ENV/
+env/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.temp/
+tmp/
+
+# Log files
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Security sensitive files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+config.json
+secrets.json
+
+# AI Assistant local settings
+.claude/settings.local.json
+.gemini/settings.json
+.mcp.json
+
+# Generated symbolic links from install script
+bin/
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Docker
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# GitHub CLI
+.gh/
+
+# Security scan reports
+bandit-report*.json
+bandit-results*.json
+
+# Testing and workflow temporary files
+.temp/
+temp/
+testing/
+
+# Test output files
+*test*output*.txt
+*_output.txt
+pytest_output.txt
+lint_output.txt
+black_output.txt
+isort_output.txt
+yaml_test_output.txt
+shell_test_output.txt
+
+# Test reports and artifacts
+*.xml
+test-results/
+test_results/
+security-artifacts/
+
+# AI workflow generated files (keep templates in .github/ai-templates/)
+fix_*_prompt.md
+security_issues.md
+test_issues.md
+remaining_issues.md
+safety-results*.json
+semgrep-results*.json
+bandit-results*.json
+npm-audit-results*.json
+ai-security-analysis.md
+security-results*.json
+
+# AI response files (should never be committed)
+ai_response_*.md
+temp_ai_response_*.md
+task_prompt_*.md
+claude_output_*.log
+security_prompt_*.md
+security_response_*.md

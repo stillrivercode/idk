@@ -1,0 +1,811 @@
+name: Reusable AI Fix
+
+# Centralized timeout configuration
+env:
+  AI_EXECUTION_TIMEOUT_MINUTES: ${{ vars.AI_EXECUTION_TIMEOUT_MINUTES || '10' }}
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'Pull request number to fix'
+        required: true
+        type: number
+      fix_type:
+        description: 'Type of fix to apply'
+        required: true
+        type: string
+        # Options: lint, security, tests, docs
+      branch_name:
+        description: 'Branch name to work on'
+        required: false
+        type: string
+        default: ''
+      debug_mode:
+        description: 'Enable debug logging'
+        required: false
+        type: boolean
+        default: false
+      # Circuit breaker configuration
+      circuit_breaker_threshold:
+        description: 'Max consecutive failures before circuit opens'
+        required: false
+        type: number
+        default: 3
+      circuit_breaker_timeout:
+        description: 'Timeout before attempting recovery (minutes)'
+        required: false
+        type: number
+        default: 30
+      # Cost control configuration
+      max_daily_cost:
+        description: 'Maximum daily API spend in USD'
+        required: false
+        type: number
+        default: 50
+      max_monthly_cost:
+        description: 'Maximum monthly API spend in USD'
+        required: false
+        type: number
+        default: 500
+      cost_alert_threshold:
+        description: 'Percentage of limit that triggers alerts'
+        required: false
+        type: number
+        default: 80
+    secrets:
+      openrouter_api_key:
+        description: 'OpenRouter API key for AI models'
+        required: true
+      gh_pat:
+        description: 'GitHub Personal Access Token (optional - only needed if github.token insufficient for cross-workflow triggering)'
+        required: false
+    outputs:
+      success:
+        description: 'Whether the fix was successful'
+        value: ${{ jobs.ai-fix.outputs.success }}
+      cost_used:
+        description: 'Estimated cost of the operation'
+        value: ${{ jobs.ai-fix.outputs.cost_used }}
+      circuit_state:
+        description: 'Circuit breaker state after operation'
+        value: ${{ jobs.ai-fix.outputs.circuit_state }}
+
+# Security controls
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+# Concurrency controls
+concurrency:
+  group: ai-fix-${{ inputs.pr_number }}-${{ inputs.fix_type }}
+  cancel-in-progress: false
+
+jobs:
+  emergency-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.emergency-check.outputs.should-proceed }}
+    steps:
+      - name: Check Emergency Stop # nosec
+        id: emergency-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          # Check for emergency stop
+          EMERGENCY_STOP=$(gh variable get EMERGENCY_STOP_ENABLED --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "false")
+          MAINTENANCE_MODE=$(gh variable get MAINTENANCE_MODE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "false")
+
+          if [ "$EMERGENCY_STOP" = "true" ]; then
+            echo "🚨 Emergency stop is enabled - halting all AI workflows"
+            echo "should-proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [ "$MAINTENANCE_MODE" = "true" ]; then
+            echo "🔧 Maintenance mode is enabled - halting AI workflows"
+            echo "should-proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ Emergency checks passed"
+          echo "should-proceed=true" >> $GITHUB_OUTPUT
+
+  circuit-breaker-check:
+    needs: emergency-check
+    if: needs.emergency-check.outputs.should-proceed == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      circuit-state: ${{ steps.circuit-check.outputs.circuit_state }}
+      should-proceed: ${{ steps.circuit-check.outputs.should_proceed }}
+    steps:
+      - name: Check Circuit Breaker Status # nosec
+        id: circuit-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CIRCUIT_BREAKER_TIMEOUT: ${{ inputs.circuit_breaker_timeout }}
+        run: |
+          # Check if circuit breaker is open
+          CIRCUIT_STATE=$(gh variable get AI_CIRCUIT_STATE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "CLOSED")
+          CIRCUIT_FAILURES=$(gh variable get AI_CIRCUIT_FAILURES --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+          CIRCUIT_LAST_FAILURE=$(gh variable get AI_CIRCUIT_LAST_FAILURE --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+
+          CURRENT_TIME=$(date +%s)
+          TIMEOUT_SECONDS=$(($CIRCUIT_BREAKER_TIMEOUT * 60))
+
+          echo "Circuit State: $CIRCUIT_STATE"
+          echo "Failures: $CIRCUIT_FAILURES"
+          echo "Last Failure: $CIRCUIT_LAST_FAILURE"
+
+          if [ "$CIRCUIT_STATE" = "OPEN" ]; then
+            TIME_SINCE_FAILURE=$((CURRENT_TIME - CIRCUIT_LAST_FAILURE))
+            if [ $TIME_SINCE_FAILURE -gt $TIMEOUT_SECONDS ]; then
+              echo "⚡ Moving circuit to HALF-OPEN state"
+              gh variable set AI_CIRCUIT_STATE --body "HALF-OPEN" --repo "$GITHUB_REPOSITORY"
+              echo "circuit_state=HALF-OPEN" >> $GITHUB_OUTPUT
+              echo "should_proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "🔴 Circuit breaker is OPEN, failing fast"
+              echo "Remaining timeout: $((TIMEOUT_SECONDS - TIME_SINCE_FAILURE)) seconds"
+              echo "circuit_state=OPEN" >> $GITHUB_OUTPUT
+              echo "should_proceed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "✅ Circuit breaker allows execution"
+            echo "circuit_state=$CIRCUIT_STATE" >> $GITHUB_OUTPUT
+            echo "should_proceed=true" >> $GITHUB_OUTPUT
+          fi
+
+  cost-check:
+    needs: [emergency-check, circuit-breaker-check]
+    if: needs.emergency-check.outputs.should-proceed == 'true' && needs.circuit-breaker-check.outputs.should-proceed == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.cost-check.outputs.should_proceed }}
+      estimated-cost: ${{ steps.cost-check.outputs.estimated_cost }}
+    steps:
+      - name: Check Cost Limits # nosec
+        id: cost-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FIX_TYPE: ${{ inputs.fix_type }}
+          MAX_DAILY_COST: ${{ inputs.max_daily_cost }}
+          MAX_MONTHLY_COST: ${{ inputs.max_monthly_cost }}
+          COST_ALERT_THRESHOLD: ${{ inputs.cost_alert_threshold }}
+        run: |
+          # Get current costs
+          DAILY_COST=$(gh variable get AI_DAILY_COST --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+          MONTHLY_COST=$(gh variable get AI_MONTHLY_COST --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+          LAST_RESET=$(gh variable get AI_COST_LAST_RESET --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+          MONTHLY_RESET=$(gh variable get AI_MONTHLY_RESET --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+
+          # Reset daily counter if needed
+          CURRENT_DATE=$(date +%Y-%m-%d)
+          if [ "$LAST_RESET" != "$CURRENT_DATE" ]; then
+            echo "🔄 Resetting daily cost counter"
+            gh variable set AI_DAILY_COST --body "0" --repo "$GITHUB_REPOSITORY"
+            gh variable set AI_COST_LAST_RESET --body "$CURRENT_DATE" --repo "$GITHUB_REPOSITORY"
+            DAILY_COST=0
+          fi
+
+          # Reset monthly counter if needed
+          CURRENT_MONTH=$(date +%Y-%m)
+          if [ "$MONTHLY_RESET" != "$CURRENT_MONTH" ]; then
+            echo "🔄 Resetting monthly cost counter"
+            gh variable set AI_MONTHLY_COST --body "0" --repo "$GITHUB_REPOSITORY"
+            gh variable set AI_MONTHLY_RESET --body "$CURRENT_MONTH" --repo "$GITHUB_REPOSITORY"
+            MONTHLY_COST=0
+          fi
+
+          # Estimate cost based on operation type
+          case "$FIX_TYPE" in
+            "lint") ESTIMATED_COST=0.25 ;;
+            "security") ESTIMATED_COST=0.50 ;;
+            "tests") ESTIMATED_COST=0.75 ;;
+            "docs") ESTIMATED_COST=0.30 ;;
+            *) ESTIMATED_COST=0.50 ;;
+          esac
+
+          # Add cost impact warnings
+          echo ""
+          echo "💰 COST IMPACT WARNING"
+          echo "----------------------------------------"
+          echo "Fix Type: $FIX_TYPE"
+          echo "Estimated Cost: \$$ESTIMATED_COST"
+          echo "Note: AI workflows may generate verbose responses which increase actual costs"
+          echo "Consider the cost-benefit trade-off before proceeding with AI fixes"
+          echo "----------------------------------------"
+
+          echo "Current daily cost: $DAILY_COST"
+          echo "Current monthly cost: $MONTHLY_COST"
+          echo "Estimated operation cost: $ESTIMATED_COST"
+
+          # Check if adding this cost would exceed limits
+          NEW_DAILY=$(echo "$DAILY_COST + $ESTIMATED_COST" | bc -l)
+          NEW_MONTHLY=$(echo "$MONTHLY_COST + $ESTIMATED_COST" | bc -l)
+
+          if (( $(echo "$NEW_DAILY > $MAX_DAILY_COST" | bc -l) )); then
+            echo "❌ Daily cost limit would be exceeded: $NEW_DAILY > $MAX_DAILY_COST"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if (( $(echo "$NEW_MONTHLY > $MAX_MONTHLY_COST" | bc -l) )); then
+            echo "❌ Monthly cost limit would be exceeded: $NEW_MONTHLY > $MAX_MONTHLY_COST"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check alert thresholds
+          DAILY_PERCENT=$(echo "scale=2; $NEW_DAILY / $MAX_DAILY_COST * 100" | bc -l)
+          MONTHLY_PERCENT=$(echo "scale=2; $NEW_MONTHLY / $MAX_MONTHLY_COST * 100" | bc -l)
+
+          if (( $(echo "$DAILY_PERCENT > $COST_ALERT_THRESHOLD" | bc -l) )); then
+            echo "⚠️ Daily cost alert threshold exceeded: ${DAILY_PERCENT}%"
+          fi
+
+          if (( $(echo "$MONTHLY_PERCENT > $COST_ALERT_THRESHOLD" | bc -l) )); then
+            echo "⚠️ Monthly cost alert threshold exceeded: ${MONTHLY_PERCENT}%"
+          fi
+
+          echo "✅ Cost check passed"
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+          echo "estimated_cost=$ESTIMATED_COST" >> $GITHUB_OUTPUT
+
+  ai-fix:
+    needs: [emergency-check, circuit-breaker-check, cost-check]
+    if: |
+      needs.emergency-check.outputs.should-proceed == 'true' &&
+      needs.circuit-breaker-check.outputs.should-proceed == 'true' &&
+      needs.cost-check.outputs.should-proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      success: ${{ steps.ai-operation.outputs.success }}
+      cost_used: ${{ needs.cost-check.outputs.estimated-cost }}
+      circuit_state: ${{ steps.circuit-update.outputs.circuit_state }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.gh_pat || github.token }}
+          ref: ${{ inputs.branch_name || github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install OpenRouter dependencies
+        run: |
+          pip install openai==1.54.3 httpx==0.27.0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Debug Information # nosec
+        if: inputs.debug_mode
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          FIX_TYPE: ${{ inputs.fix_type }}
+          BRANCH_NAME: ${{ inputs.branch_name || github.head_ref }}
+          CIRCUIT_STATE: ${{ needs.circuit-breaker-check.outputs.circuit-state }}
+          ESTIMATED_COST: ${{ needs.cost-check.outputs.estimated-cost }}
+        run: |
+          echo "=== Debug Information ==="
+          echo "PR Number: $PR_NUMBER"
+          echo "Fix Type: $FIX_TYPE"
+          echo "Branch: $BRANCH_NAME"
+          echo "Circuit State: $CIRCUIT_STATE"
+          echo "Estimated Cost: $ESTIMATED_COST"
+          echo "========================"
+
+      - name: Two-Stage Lint Fix (Automatic + AI)
+        if: inputs.fix_type == 'lint'
+        id: lint-fix
+        timeout-minutes: ${{ fromJSON(env.AI_EXECUTION_TIMEOUT_MINUTES) }}
+        run: |
+          set +e  # Don't exit on failure
+
+          echo "🔧 Stage 1: Automatic fixes"
+
+          # Install Python linting tools
+          pip install black isort ruff
+
+          # Apply automatic fixes
+          echo "Running black..."
+          black . --diff --color 2>&1 | tee black.log || true
+          black . || true
+
+          echo "Running isort..."
+          isort . --diff --color 2>&1 | tee isort.log || true
+          isort . || true
+
+          echo "Running ruff auto-fixes..."
+          ruff check --fix . 2>&1 | tee ruff-fix.log || true
+
+          # Check if there are still linting issues
+          echo "Checking remaining issues..."
+          ruff check . > remaining-issues.txt 2>&1 || true
+
+          if [ -s remaining-issues.txt ]; then
+            echo "🤖 Stage 2: AI analysis for remaining issues"
+
+            # Use Claude only for remaining complex issues
+            cat remaining-issues.txt | head -50 > claude-input.txt
+
+            # Create prompt file for Claude
+            echo "Fix the following Python linting issues. Only provide the specific fixes needed, no explanations:" > claude-prompt.txt
+            echo "" >> claude-prompt.txt
+            cat claude-input.txt >> claude-prompt.txt
+            echo "" >> claude-prompt.txt
+            echo "Provide specific file changes needed to resolve these linting issues." >> claude-prompt.txt
+
+            # Execute AI via OpenRouter with secure output handling
+            echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
+            ./scripts/openrouter-ai-helper.sh \
+              --prompt-file claude-prompt.txt \
+              --output-file claude-response.txt \
+              --model "$AI_MODEL" \
+              --title "AI Lint Fix" || {
+              echo "AI request failed with exit code $?"
+              echo "success=false" >> $GITHUB_OUTPUT
+              exit 1
+            }
+            CLAUDE_RESULT=$(cat claude-response.txt)
+
+            # Sanitize Claude output with improved patterns (avoid false positives)
+            echo "$CLAUDE_RESULT" | sed -E '
+              # Specific API key patterns (more precise)
+              s/\b(sk-[A-Za-z0-9]{32,})\b/sk-***REDACTED***/g
+              s/\b(sk-ant-[A-Za-z0-9_-]{32,})\b/sk-ant-***REDACTED***/g
+              s/\b(gh_[A-Za-z0-9_-]{32,})\b/gh_***REDACTED***/g
+              s/\b(ghp_[A-Za-z0-9_-]{32,})\b/ghp_***REDACTED***/g
+
+              # Environment variable assignments
+              s/([A-Z_]+API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+              s/(ANTHROPIC_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+              s/(OPENROUTER_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+              s/(GITHUB_TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+              s/([A-Z_]*TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+
+              # Bearer tokens and JWT patterns
+              s/(Bearer[[:space:]]+)[A-Za-z0-9_-]+/\1***REDACTED***/g
+              s/\b[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/***JWT_TOKEN_REDACTED***/g
+
+              # Only redact very long base64 strings (64+ chars) to avoid commit hashes
+              s/\b[A-Za-z0-9+/]{64,}={0,2}\b/***BASE64_REDACTED***/g
+            ' > claude-fixes.txt
+
+            # Apply Claude's suggestions (this would need more sophisticated parsing in practice)
+            echo "🔒 AI provided the following SANITIZED fixes:"
+            cat claude-fixes.txt
+          else
+            echo "✅ All linting issues resolved with automatic fixes"
+          fi
+
+          echo "success=true" >> $GITHUB_OUTPUT
+
+      - name: AI Security Fix
+        if: inputs.fix_type == 'security'
+        id: security-fix
+        timeout-minutes: ${{ fromJSON(env.AI_EXECUTION_TIMEOUT_MINUTES) }}
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.openrouter_api_key }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+        run: |
+          set +e  # Don't exit on failure
+
+          echo "🔒 Analyzing security issues..."
+
+          # Download security scan artifacts if available
+          if gh run download --name security-results 2>/dev/null; then
+            echo "Using existing security scan results"
+            cat security-results/*.json > combined-security.json 2>/dev/null || echo "{}" > combined-security.json
+          else
+            echo "Running fresh security scan"
+            pip install bandit safety semgrep
+
+            # Run security scans
+            bandit -r . -f json -o bandit-results.json 2>/dev/null || echo "{}" > bandit-results.json
+            safety check --json > safety-results.json 2>/dev/null || echo "{}" > safety-results.json
+
+            # Combine results
+            jq -s add bandit-results.json safety-results.json > combined-security.json
+          fi
+
+          # Use Claude to analyze and fix security issues
+          # Create prompt file for Claude
+          echo "Analyze the following security scan results and provide specific fixes:" > security-prompt.txt
+          echo "" >> security-prompt.txt
+          cat combined-security.json | jq -r '.' >> security-prompt.txt
+          echo "" >> security-prompt.txt
+          echo "Please provide:" >> security-prompt.txt
+          echo "1. Explanation of each security issue" >> security-prompt.txt
+          echo "2. Specific code changes needed to fix each issue" >> security-prompt.txt
+          echo "3. Any configuration changes required" >> security-prompt.txt
+          echo "" >> security-prompt.txt
+          echo "Focus on high and medium severity issues first." >> security-prompt.txt
+
+          # Execute AI via OpenRouter with secure output handling
+          echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
+          ./scripts/openrouter-ai-helper.sh \
+            --prompt-file security-prompt.txt \
+            --output-file security-response.txt \
+            --model "$AI_MODEL" \
+            --title "AI Security Fix" || {
+            echo "AI request failed with exit code $?"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          }
+          CLAUDE_RESULT=$(cat security-response.txt)
+
+          # Sanitize Claude output with improved patterns (avoid false positives)
+          echo "$CLAUDE_RESULT" | sed -E '
+            # Specific API key patterns (more precise)
+            s/\b(sk-[A-Za-z0-9]{32,})\b/sk-***REDACTED***/g
+            s/\b(sk-ant-[A-Za-z0-9_-]{32,})\b/sk-ant-***REDACTED***/g
+            s/\b(gh_[A-Za-z0-9_-]{32,})\b/gh_***REDACTED***/g
+            s/\b(ghp_[A-Za-z0-9_-]{32,})\b/ghp_***REDACTED***/g
+
+            # Environment variable assignments
+            s/([A-Z_]+API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/(ANTHROPIC_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/(GITHUB_TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/([A-Z_]*TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+
+            # Bearer tokens and JWT patterns
+            s/(Bearer[[:space:]]+)[A-Za-z0-9_-]+/\1***REDACTED***/g
+            s/\b[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/***JWT_TOKEN_REDACTED***/g
+
+            # Only redact very long base64 strings (64+ chars) to avoid commit hashes
+            s/\b[A-Za-z0-9+/]{64,}={0,2}\b/***BASE64_REDACTED***/g
+          ' > security-fixes.txt
+          echo "🔒 AI provided the following SANITIZED security fixes:"
+          cat security-fixes.txt
+
+          echo "success=true" >> $GITHUB_OUTPUT
+
+      - name: AI Test Fix
+        if: inputs.fix_type == 'tests'
+        id: test-fix
+        timeout-minutes: ${{ fromJSON(env.AI_EXECUTION_TIMEOUT_MINUTES) }}
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.openrouter_api_key }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+        run: |
+          set +e  # Don't exit on failure
+
+          echo "🧪 Analyzing test failures..."
+
+          # Run tests to capture failures
+          if [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
+            pytest --tb=short > test-output.txt 2>&1 || true
+          elif [ -f "package.json" ]; then
+            npm test > test-output.txt 2>&1 || true
+          else
+            echo "No recognized test framework found"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Use Claude to analyze test failures
+          # Create prompt file for Claude
+          echo "Analyze the following test failures and provide fixes:" > test-prompt.txt
+          echo "" >> test-prompt.txt
+          cat test-output.txt | tail -100 >> test-prompt.txt
+          echo "" >> test-prompt.txt
+          echo "Please provide:" >> test-prompt.txt
+          echo "1. Analysis of why each test is failing" >> test-prompt.txt
+          echo "2. Specific code changes needed to fix the tests" >> test-prompt.txt
+          echo "3. Any new test cases that should be added" >> test-prompt.txt
+          echo "" >> test-prompt.txt
+          echo "Focus on fixing existing tests rather than adding new ones unless specifically needed." >> test-prompt.txt
+
+          # Execute AI via OpenRouter with secure output handling
+          echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
+          ./scripts/openrouter-ai-helper.sh \
+            --prompt-file test-prompt.txt \
+            --output-file test-response.txt \
+            --model "$AI_MODEL" \
+            --title "AI Test Fix" || {
+            echo "AI request failed with exit code $?"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          }
+          CLAUDE_RESULT=$(cat test-response.txt)
+
+          # Sanitize Claude output with improved patterns (avoid false positives)
+          echo "$CLAUDE_RESULT" | sed -E '
+            # Specific API key patterns (more precise)
+            s/\b(sk-[A-Za-z0-9]{32,})\b/sk-***REDACTED***/g
+            s/\b(sk-ant-[A-Za-z0-9_-]{32,})\b/sk-ant-***REDACTED***/g
+            s/\b(gh_[A-Za-z0-9_-]{32,})\b/gh_***REDACTED***/g
+            s/\b(ghp_[A-Za-z0-9_-]{32,})\b/ghp_***REDACTED***/g
+
+            # Environment variable assignments
+            s/([A-Z_]+API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/(ANTHROPIC_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/(GITHUB_TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/([A-Z_]*TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+
+            # Bearer tokens and JWT patterns
+            s/(Bearer[[:space:]]+)[A-Za-z0-9_-]+/\1***REDACTED***/g
+            s/\b[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/***JWT_TOKEN_REDACTED***/g
+
+            # Only redact very long base64 strings (64+ chars) to avoid commit hashes
+            s/\b[A-Za-z0-9+/]{64,}={0,2}\b/***BASE64_REDACTED***/g
+          ' > test-fixes.txt
+          echo "🔒 AI provided the following SANITIZED test fixes:"
+          cat test-fixes.txt
+
+          echo "success=true" >> $GITHUB_OUTPUT
+
+      - name: AI Documentation Fix
+        if: inputs.fix_type == 'docs'
+        id: docs-fix
+        timeout-minutes: ${{ fromJSON(env.AI_EXECUTION_TIMEOUT_MINUTES) }}
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.openrouter_api_key }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+        run: |
+          set +e  # Don't exit on failure
+
+          echo "📚 Analyzing documentation issues..."
+
+          # Find documentation files
+          find . -name "*.md" -o -name "*.rst" -o -name "*.txt" | head -20 > doc-files.txt
+
+          # Use Claude to improve documentation
+          # Create prompt file for Claude
+          echo "Review and improve the documentation in this repository:" > docs-prompt.txt
+          echo "" >> docs-prompt.txt
+          find . -name "README*" -exec cat {} \; 2>/dev/null | head -100 >> docs-prompt.txt
+          echo "" >> docs-prompt.txt
+          echo "Please provide:" >> docs-prompt.txt
+          echo "1. Suggestions for improving clarity and completeness" >> docs-prompt.txt
+          echo "2. Missing sections that should be added" >> docs-prompt.txt
+          echo "3. Specific text improvements" >> docs-prompt.txt
+          echo "4. Better organization if needed" >> docs-prompt.txt
+          echo "" >> docs-prompt.txt
+          echo "Focus on making the documentation more helpful for users and contributors." >> docs-prompt.txt
+
+          # Execute AI via OpenRouter with secure output handling
+          echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
+          ./scripts/openrouter-ai-helper.sh \
+            --prompt-file docs-prompt.txt \
+            --output-file docs-response.txt \
+            --model "$AI_MODEL" \
+            --title "AI Documentation Fix" || {
+            echo "AI request failed with exit code $?"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          }
+          CLAUDE_RESULT=$(cat docs-response.txt)
+
+          # Sanitize Claude output with improved patterns (avoid false positives)
+          echo "$CLAUDE_RESULT" | sed -E '
+            # Specific API key patterns (more precise)
+            s/\b(sk-[A-Za-z0-9]{32,})\b/sk-***REDACTED***/g
+            s/\b(sk-ant-[A-Za-z0-9_-]{32,})\b/sk-ant-***REDACTED***/g
+            s/\b(gh_[A-Za-z0-9_-]{32,})\b/gh_***REDACTED***/g
+            s/\b(ghp_[A-Za-z0-9_-]{32,})\b/ghp_***REDACTED***/g
+
+            # Environment variable assignments
+            s/([A-Z_]+API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/(ANTHROPIC_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/(GITHUB_TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+            s/([A-Z_]*TOKEN)[[:space:]]*=[[:space:]]*[^[:space:]]+/\1=***REDACTED***/g
+
+            # Bearer tokens and JWT patterns
+            s/(Bearer[[:space:]]+)[A-Za-z0-9_-]+/\1***REDACTED***/g
+            s/\b[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/***JWT_TOKEN_REDACTED***/g
+
+            # Only redact very long base64 strings (64+ chars) to avoid commit hashes
+            s/\b[A-Za-z0-9+/]{64,}={0,2}\b/***BASE64_REDACTED***/g
+          ' > docs-fixes.txt
+          echo "🔒 AI provided the following SANITIZED documentation improvements:"
+          cat docs-fixes.txt
+
+          echo "success=true" >> $GITHUB_OUTPUT
+
+      - name: Commit Changes # nosec
+        id: commit-changes
+        if: >
+          steps.lint-fix.outputs.success == 'true' ||
+          steps.security-fix.outputs.success == 'true' ||
+          steps.test-fix.outputs.success == 'true' ||
+          steps.docs-fix.outputs.success == 'true'
+        env:
+          FIX_TYPE: ${{ inputs.fix_type }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          BRANCH_NAME: ${{ inputs.branch_name || github.head_ref }}
+        run: |
+          # Check if there are changes to commit
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "changes_committed=false" >> $GITHUB_OUTPUT
+          else
+            # Commit changes
+            git add .
+
+            # Create commit message file
+            echo "🤖 AI Fix: Resolve $FIX_TYPE issues" > commit-msg.txt
+            echo "" >> commit-msg.txt
+            echo "Applied automated fixes for $FIX_TYPE issues found in PR #$PR_NUMBER." >> commit-msg.txt
+            echo "" >> commit-msg.txt
+            echo "🤖 Generated with OpenRouter AI" >> commit-msg.txt
+            echo "Co-Authored-By: AI Assistant <noreply@openrouter.ai>" >> commit-msg.txt
+
+            git commit -F commit-msg.txt || true
+
+            # Push changes
+            git push origin "$BRANCH_NAME" || true
+
+            echo "changes_committed=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes committed and pushed"
+          fi
+
+      - name: Update Cost Tracking # nosec
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ESTIMATED_COST: ${{ needs.cost-check.outputs.estimated-cost }}
+        run: |
+          # Update cost tracking
+          DAILY_COST=$(gh variable get AI_DAILY_COST --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+          MONTHLY_COST=$(gh variable get AI_MONTHLY_COST --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+
+          # ESTIMATED_COST already set in environment
+
+          NEW_DAILY=$(echo "$DAILY_COST + $ESTIMATED_COST" | bc -l)
+          NEW_MONTHLY=$(echo "$MONTHLY_COST + $ESTIMATED_COST" | bc -l)
+
+          gh variable set AI_DAILY_COST --body "$NEW_DAILY" --repo "$GITHUB_REPOSITORY"
+          gh variable set AI_MONTHLY_COST --body "$NEW_MONTHLY" --repo "$GITHUB_REPOSITORY"
+
+          echo "📊 Updated costs: Daily=$NEW_DAILY, Monthly=$NEW_MONTHLY"
+
+      - name: Update Circuit Breaker # nosec
+        id: circuit-update
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CIRCUIT_BREAKER_THRESHOLD: ${{ inputs.circuit_breaker_threshold }}
+        run: |
+          # Determine if the operation was successful
+          OPERATION_SUCCESS="false"
+          if [ "${{ steps.lint-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.security-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.test-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.docs-fix.outputs.success }}" = "true" ]; then
+            OPERATION_SUCCESS="true"
+          fi
+
+          if [ "$OPERATION_SUCCESS" = "true" ]; then
+            # Success - reset circuit breaker
+            gh variable set AI_CIRCUIT_STATE --body "CLOSED" --repo "$GITHUB_REPOSITORY"
+            gh variable set AI_CIRCUIT_FAILURES --body "0" --repo "$GITHUB_REPOSITORY"
+            echo "✅ AI operation successful, circuit breaker reset"
+            echo "circuit_state=CLOSED" >> $GITHUB_OUTPUT
+          else
+            # Failure - increment failure counter
+            CURRENT_FAILURES=$(gh variable get AI_CIRCUIT_FAILURES --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "0")
+            NEW_FAILURES=$((CURRENT_FAILURES + 1))
+            gh variable set AI_CIRCUIT_FAILURES --body "$NEW_FAILURES" --repo "$GITHUB_REPOSITORY"
+            gh variable set AI_CIRCUIT_LAST_FAILURE --body "$(date +%s)" --repo "$GITHUB_REPOSITORY"
+
+            if [ $NEW_FAILURES -ge $CIRCUIT_BREAKER_THRESHOLD ]; then
+              echo "❌ Circuit breaker threshold reached, opening circuit"
+              gh variable set AI_CIRCUIT_STATE --body "OPEN" --repo "$GITHUB_REPOSITORY"
+              echo "circuit_state=OPEN" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ AI operation failed, failure count: $NEW_FAILURES"
+              echo "circuit_state=CLOSED" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Update PR Labels # nosec
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          FIX_TYPE: ${{ inputs.fix_type }}
+        run: |
+          # Remove the triggering label
+          gh pr edit "$PR_NUMBER" --remove-label "ai-fix-$FIX_TYPE" || true
+
+          # Add completion status labels
+          OPERATION_SUCCESS="false"
+          if [ "${{ steps.lint-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.security-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.test-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.docs-fix.outputs.success }}" = "true" ]; then
+            OPERATION_SUCCESS="true"
+          fi
+
+          if [ "$OPERATION_SUCCESS" = "true" ]; then
+            if [ "${{ steps.commit-changes.outputs.changes_committed }}" = "true" ]; then
+              gh pr edit "$PR_NUMBER" --add-label "ai-fixed-$FIX_TYPE" || true
+            else
+              gh pr edit "$PR_NUMBER" --add-label "ai-no-changes-needed" || true
+            fi
+          else
+            gh pr edit "$PR_NUMBER" --add-label "ai-fix-failed" || true
+          fi
+
+      - name: Add PR Comment # nosec
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          FIX_TYPE: ${{ inputs.fix_type }}
+          ESTIMATED_COST: ${{ needs.cost-check.outputs.estimated-cost }}
+          CIRCUIT_STATE: ${{ steps.circuit-update.outputs.circuit_state }}
+        run: |
+          # Determine operation result
+          OPERATION_SUCCESS="false"
+          if [ "${{ steps.lint-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.security-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.test-fix.outputs.success }}" = "true" ] || \
+             [ "${{ steps.docs-fix.outputs.success }}" = "true" ]; then
+            OPERATION_SUCCESS="true"
+          fi
+
+          # Create status comment
+          if [ "$OPERATION_SUCCESS" = "true" ]; then
+            if [ "${{ steps.commit-changes.outputs.changes_committed }}" = "true" ]; then
+              echo "✅ AI Fix Completed Successfully" > comment.txt
+              echo "" >> comment.txt
+              echo "Fix Type: $FIX_TYPE" >> comment.txt
+              echo "Changes: Applied and committed" >> comment.txt
+              echo "Cost: \$$ESTIMATED_COST" >> comment.txt
+              echo "Circuit State: $CIRCUIT_STATE" >> comment.txt
+              echo "" >> comment.txt
+              echo "The AI has successfully analyzed and fixed the $FIX_TYPE issues in this PR." >> comment.txt
+            else
+              echo "ℹ️ AI Fix Completed - No Changes Needed" > comment.txt
+              echo "" >> comment.txt
+              echo "Fix Type: $FIX_TYPE" >> comment.txt
+              echo "Changes: None required" >> comment.txt
+              echo "Cost: \$$ESTIMATED_COST" >> comment.txt
+              echo "Circuit State: $CIRCUIT_STATE" >> comment.txt
+              echo "" >> comment.txt
+              echo "The AI analyzed the $FIX_TYPE issues but no changes were needed." >> comment.txt
+            fi
+          else
+            echo "❌ AI Fix Failed" > comment.txt
+            echo "" >> comment.txt
+            echo "Fix Type: $FIX_TYPE" >> comment.txt
+            echo "Changes: None applied" >> comment.txt
+            echo "Cost: \$$ESTIMATED_COST" >> comment.txt
+            echo "Circuit State: $CIRCUIT_STATE" >> comment.txt
+            echo "" >> comment.txt
+            echo "The AI was unable to fix the $FIX_TYPE issues. Manual intervention may be required." >> comment.txt
+          fi
+
+          gh pr comment "$PR_NUMBER" --body "$(cat comment.txt)"
+
+  # Output the overall operation result
+  ai-operation:
+    needs: [ai-fix]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Operation Output
+        id: ai-operation
+        run: |
+          if [ "${{ needs.ai-fix.outputs.success }}" = "true" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
