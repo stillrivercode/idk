@@ -1,0 +1,5 @@
+name: "Caching Strategy"
+description: "The strategy used for caching data."
+tags:
+  - "caching"
+  - "performance"

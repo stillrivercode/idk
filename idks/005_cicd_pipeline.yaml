@@ -1,0 +1,5 @@
+name: "CI/CD Pipeline"
+description: "Defines the continuous integration and deployment pipeline."
+tags:
+  - "ci-cd"
+  - "devops"

@@ -1,0 +1,5 @@
+name: "Feature Flags"
+description: "The strategy used for managing feature flags."
+tags:
+  - "feature-flags"
+  - "development"

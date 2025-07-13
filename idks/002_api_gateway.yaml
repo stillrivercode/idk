@@ -1,0 +1,5 @@
+name: "API Gateway"
+description: "The single entry point for all API requests."
+tags:
+  - "api"
+  - "networking"

@@ -1,0 +1,5 @@
+name: "Error Handling"
+description: "The strategy used for handling errors."
+tags:
+  - "error-handling"
+  - "stability"

@@ -248,12 +248,7 @@ generate_spec_document() {
 
     local labels_md
     if [[ -n "$labels" ]]; then
-        labels_md=$(echo "$labels" | tr ',' '\n' | while read -r label; do
-            label=$(echo "$label" | xargs)  # Trim whitespace
-            if [[ -n "$label" ]]; then
-                echo "- \`$label\`"
-            fi
-        done)
+        labels_md=$(echo "$labels" | tr ',' ' ' | sed 's/ /`, `/g' | sed 's/^/- `/g' | sed 's/$/`/g')
     else
         labels_md="- None"
     fi

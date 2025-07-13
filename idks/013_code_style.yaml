@@ -1,0 +1,5 @@
+name: "Code Style"
+description: "The code style guide for the project."
+tags:
+  - "code-style"
+  - "quality"

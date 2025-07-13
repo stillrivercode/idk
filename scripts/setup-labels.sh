@@ -69,6 +69,7 @@ create_or_update_label "testing" "F9D0C4" "Testing improvements"
 echo "Creating scope labels..."
 create_or_update_label "phase-1" "1D76DB" "Phase 1 roadmap items"
 create_or_update_label "phase-2" "0366D6" "Phase 2 roadmap items"
+create_or_update_label "mvp" "fce2c3" "Minimum Viable Product features"
 create_or_update_label "workflow" "E4E669" "GitHub Actions workflow"
 create_or_update_label "infrastructure" "5319E7" "Infrastructure setup"
 

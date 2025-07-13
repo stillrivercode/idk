@@ -1,0 +1,5 @@
+name: "Logging and Monitoring"
+description: "Handles logging and monitoring of the application."
+tags:
+  - "logging"
+  - "monitoring"

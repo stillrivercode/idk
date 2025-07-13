@@ -1,0 +1,5 @@
+name: "Deployment Strategy"
+description: "The strategy used for deploying the application."
+tags:
+  - "deployment"
+  - "devops"

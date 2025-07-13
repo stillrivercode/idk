@@ -1,0 +1,5 @@
+name: "Testing Strategy"
+description: "The strategy used for testing the application."
+tags:
+  - "testing"
+  - "quality"

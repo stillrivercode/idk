@@ -1,0 +1,5 @@
+name: "Database Schema"
+description: "Defines the structure of the database."
+tags:
+  - "database"
+  - "schema"

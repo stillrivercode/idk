@@ -595,32 +595,32 @@ use_template() {
             sanitized_value="${sanitized_value//\\/\\\\}"
 
             # Escape shell metacharacters that could cause command injection
-            sanitized_value="${sanitized_value//\$/\\\$}"     # Dollar signs
-            sanitized_value="${sanitized_value//\`/\\\`}"     # Backticks
-            sanitized_value="${sanitized_value//\!/\\\!}"     # Exclamation marks (history expansion)
-            sanitized_value="${sanitized_value//\"/\\\"}"     # Double quotes
-            sanitized_value="${sanitized_value//\'/\\\'}"     # Single quotes
+            sanitized_value="${sanitized_value//\$/\\$}"     # Dollar signs
+            sanitized_value="${sanitized_value//\`/\\`}"     # Backticks
+            sanitized_value="${sanitized_value//\!/\\!}"     # Exclamation marks (history expansion)
+            sanitized_value="${sanitized_value//\"/\\"}"     # Double quotes
+            sanitized_value="${sanitized_value//\'/\\'}"     # Single quotes
 
             # Escape other potentially dangerous characters
-            sanitized_value="${sanitized_value//;/\\;}"       # Command separators
-            sanitized_value="${sanitized_value//\&/\\\&}"     # Background/logical operators
-            sanitized_value="${sanitized_value//\|/\\\|}"     # Pipes
-            sanitized_value="${sanitized_value//</\\<}"       # Input redirection
-            sanitized_value="${sanitized_value//>/\\>}"       # Output redirection
-            sanitized_value="${sanitized_value//\(/\\\(}"     # Subshells
-            sanitized_value="${sanitized_value//\)/\\\)}"     # Subshells
-            sanitized_value="${sanitized_value//\{/\\\{}"     # Brace expansion
-            sanitized_value="${sanitized_value//\}/\\\}}"     # Brace expansion
-            sanitized_value="${sanitized_value//\[/\\\[}"     # Bracket expansion
-            sanitized_value="${sanitized_value//\]/\\\]}"     # Bracket expansion
-            sanitized_value="${sanitized_value//\*/\\\*}"     # Globbing
-            sanitized_value="${sanitized_value//\?/\\\?}"     # Globbing
+            sanitized_value="${sanitized_value//\;/\\;}"       # Command separators
+            sanitized_value="${sanitized_value//\&/\\&}"     # Background/logical operators
+            sanitized_value="${sanitized_value//\|/\\|}"     # Pipes
+            sanitized_value="${sanitized_value//\</\\<}"       # Input redirection
+            sanitized_value="${sanitized_value//\>/\\>}"       # Output redirection
+            sanitized_value="${sanitized_value//\(/\\(}"     # Subshells
+            sanitized_value="${sanitized_value//\)/\\)}"     # Subshells
+            sanitized_value="${sanitized_value//\{/\\{}"     # Brace expansion
+            sanitized_value="${sanitized_value//\}/\\}}"     # Brace expansion
+            sanitized_value="${sanitized_value//\[/\\}"     # Bracket expansion
+            sanitized_value="${sanitized_value//\]/\\}"     # Bracket expansion
+            sanitized_value="${sanitized_value//\*/\\*}"     # Globbing
+            sanitized_value="${sanitized_value//\?/\\?}"     # Globbing
         else
             sanitized_value=""
         fi
 
         # Replace all occurrences of placeholder
-        result="${result//\{\{$key\}\}/$sanitized_value}"
+        result="${result//\{\{$key\}\}//sanitized_value}"
         ((i++))
     done
 
