@@ -191,10 +191,10 @@ This provides a live view of your work and helps collaboration.
 
 ### Implementation Checklist
 
-- [ ] **Task 1:** Create the `idks` directory.
-- [ ] **Task 2:** Create the 20 core IDK YAML files.
-- [ ] **Task 3:** Create the validation script.
-- [ ] **Task 4:** Create the unit tests for the validation script.
+- [x] **Task 1:** Create the `idks` directory.
+- [x] **Task 2:** Create the 20 core IDK YAML files.
+- [x] **Task 3:** Create the validation script.
+- [x] **Task 4:** Create the unit tests for the validation script.
 
 ### Notes & Blockers
 
