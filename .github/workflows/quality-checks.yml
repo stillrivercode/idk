@@ -31,6 +31,13 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Run YAML lint
+        run: |
+          # Check YAML files for syntax errors
+          find . -name "*.yml" -o -name "*.yaml" | while read -r file; do
+            echo "Checking $file"
+            python -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+          done
 
       - name: Add ai-fix-lint label on failure
         if: failure() && github.event_name == 'pull_request'
