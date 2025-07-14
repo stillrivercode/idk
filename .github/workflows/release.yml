@@ -5,6 +5,14 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'The branch to run the release from'
+        required: true
+        type: choice
+        options:
+          - main
+        default: 'main'
 
 permissions:
   contents: write
