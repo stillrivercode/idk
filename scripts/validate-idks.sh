@@ -9,16 +9,24 @@ else
 fi
 
 for file in $FILES; do
-  if ! grep -q "name:" "$file"; then
-    echo "Error: $file is missing the 'name' key."
+  if ! grep -q "meta:" "$file"; then
+    echo "Error: $file is missing the 'meta' key."
     exit 1
   fi
-  if ! grep -q "description:" "$file"; then
-    echo "Error: $file is missing the 'description' key."
+  if ! grep -q "keyword:" "$file"; then
+    echo "Error: $file is missing the 'keyword' key."
     exit 1
   fi
-  if ! grep -q "tags:" "$file"; then
-    echo "Error: $file is missing the 'tags' key."
+  if ! grep -q "namespace:" "$file"; then
+    echo "Error: $file is missing the 'namespace' key."
+    exit 1
+  fi
+  if ! grep -q "brief:" "$file"; then
+    echo "Error: $file is missing the 'brief' key."
+    exit 1
+  fi
+  if ! grep -q "definition:" "$file"; then
+    echo "Error: $file is missing the 'definition' key."
     exit 1
   fi
 done

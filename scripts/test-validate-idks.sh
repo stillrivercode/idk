@@ -7,17 +7,29 @@ trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Create a valid IDK file
 cat > "$TEMP_DIR/valid.yaml" <<EOL
-name: "Valid IDK"
-description: "This is a valid IDK."
-tags:
-  - "valid"
+meta:
+  id: "test.ValidIdk"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+keyword: "ValidIdk"
+namespace: "test"
+brief: "This is a valid IDK."
+definition:
+  description: "This is a valid IDK."
 EOL
 
-# Create an invalid IDK file (missing description)
+# Create an invalid IDK file (missing brief)
 cat > "$TEMP_DIR/invalid.yaml" <<EOL
-name: "Invalid IDK"
-tags:
-  - "invalid"
+meta:
+  id: "test.InvalidIdk"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+keyword: "InvalidIdk"
+namespace: "test"
+definition:
+  description: "This is an invalid IDK."
 EOL
 
 # Test case 1: Valid IDK file

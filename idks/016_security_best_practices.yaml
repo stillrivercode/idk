@@ -1,5 +1,26 @@
-name: "Security Best Practices"
-description: "The security best practices for the project."
-tags:
-  - "security"
-  - "documentation"
+meta:
+  id: "security.SecurityBestPractices"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+
+keyword: "SecurityBestPractices"
+namespace: "security"
+brief: "The security best practices for the project."
+tokens_saved: 9
+
+definition:
+  description: |
+    Documents the security best practices to be followed throughout the project, including secure coding guidelines, dependency management, and vulnerability scanning.
+  parameters: []
+
+examples:
+  - input: "SecurityBestPractices"
+    expands_to: "Create a document outlining security best practices for the project."
+
+tests:
+  - description: "Ensures the security best practices document is created."
+    input: "SecurityBestPractices"
+    should_include: ["security", "best practices", "guidelines"]
+
+related: ["UserAuthentication", "CodeReviewGuidelines"]

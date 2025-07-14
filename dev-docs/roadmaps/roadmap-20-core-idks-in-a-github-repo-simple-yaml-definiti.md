@@ -1,10 +1,10 @@
-# Roadmap: 20 core IDKs in a GitHub repo
+# Roadmap: IDK Dictionary
 
-This roadmap outlines the development plan for 20 core IDKs in a GitHub repo, providing a structured approach to implementation across three phases.
+This roadmap outlines the development plan for the Information Dense Keywords (IDK) Dictionary, providing a structured approach to implementation across three phases.
 
 ---
 
-## Phase 1: Foundation & Core Implementation (MVP)
+## Phase 0: Proof of Concept ($0 - $10K, 4 weeks)
 
 **Goal:** Establish the core infrastructure and deliver a Minimum Viable Product (MVP) with essential functionality.
 
@@ -18,39 +18,59 @@ This roadmap outlines the development plan for 20 core IDKs in a GitHub repo, pr
     -   **Implementation:** Core development and testing.
     -   **Integration:** Establish foundational components.
 
+-   **Basic CLI tool for expansion:**
+    -   **Implementation:** Core development and testing.
+    -   **Integration:** Establish foundational components.
 
+-   **Community GitHub Discussions:**
+    -   **Implementation:** Core development and testing.
+    -   **Integration:** Establish foundational components.
 
 ---
 
-## Phase 2: Advanced & Enhanced Features
+## Phase 1: Foundation ($10K - $50K, 3 months)
 
 **Goal:** Introduce more complex features and enhance the application's capabilities beyond the basic implementation.
 
 ### Features
 
--   **Basic CLI tool for expansion:**
-    -   **Enhancement:** Build upon Phase 1 foundation.
+-   **100 community-contributed IDKs:**
+    -   **Enhancement:** Build upon Phase 0 foundation.
     -   **Optimization:** Improve performance and user experience.
 
--   **Community GitHub Discussions:**
-    -   **Enhancement:** Build upon Phase 1 foundation.
+-   **VS Code extension (minimal):**
+    -   **Enhancement:** Build upon Phase 0 foundation.
     -   **Optimization:** Improve performance and user experience.
 
+-   **Documentation site:**
+    -   **Enhancement:** Build upon Phase 0 foundation.
+    -   **Optimization:** Improve performance and user experience.
 
+-   **1000+ GitHub stars:**
+    -   **Enhancement:** Build upon Phase 0 foundation.
+    -   **Optimization:** Improve performance and user experience.
 
 ---
 
-## Phase 3: Feature Expansion & User Engagement
+## Phase 2+: Organic Growth ($50K+, 6+ months)
 
 **Goal:** Broaden functionality, enhance user experience, and establish advanced features for comprehensive coverage.
 
 ### Features
 
--   **100 community-contributed IDKs:**
+-   **Browser extensions:**
     -   **Advanced Implementation:** Complex features and integrations.
     -   **User Experience:** Polish and advanced functionality.
 
--   **VS Code extension (minimal):**
+-   **Enterprise features (if demand exists):**
+    -   **Advanced Implementation:** Complex features and integrations.
+    -   **User Experience:** Polish and advanced functionality.
+
+-   **Multi-language support:**
+    -   **Advanced Implementation:** Complex features and integrations.
+    -   **User Experience:** Polish and advanced functionality.
+
+-   **Certification program:**
     -   **Advanced Implementation:** Complex features and integrations.
     -   **User Experience:** Polish and advanced functionality.
 

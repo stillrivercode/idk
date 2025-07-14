@@ -24,6 +24,11 @@ You can use these documents with your existing repositories by copying the files
 
 The documentation for this project is in the `docs` directory.
 
+## 💡 Examples
+
+- [Usage Example](examples/usage-example.md)
+- [Custom IDK Example](examples/custom-idk-example.md)
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) for more information.

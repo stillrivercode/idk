@@ -1,5 +1,32 @@
-name: "Code Style"
-description: "The code style guide for the project."
-tags:
-  - "code-style"
-  - "quality"
+meta:
+  id: "quality.CodeStyle"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+
+keyword: "CodeStyle"
+namespace: "quality"
+brief: "The code style guide for the project."
+tokens_saved: 6
+
+definition:
+  description: |
+    Defines the code style guide for the project, including conventions for naming, formatting, and commenting.
+  parameters:
+    - name: "linter"
+      type: "string"
+      required: false
+      default: "eslint"
+
+examples:
+  - input: "CodeStyle"
+    expands_to: "Set up ESLint for code style enforcement."
+  - input: "CodeStyle[linter=prettier]"
+    expands_to: "Set up Prettier for code formatting."
+
+tests:
+  - description: "Ensures the linter is configured."
+    input: "CodeStyle"
+    should_include: ["lint", "config", "rules"]
+
+related: ["FrontendFramework", "BackendFramework"]

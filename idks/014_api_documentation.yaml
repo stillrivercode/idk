@@ -1,5 +1,32 @@
-name: "API Documentation"
-description: "The documentation for the API."
-tags:
-  - "api"
-  - "documentation"
+meta:
+  id: "docs.ApiDocumentation"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+
+keyword: "ApiDocumentation"
+namespace: "docs"
+brief: "The documentation for the API."
+tokens_saved: 8
+
+definition:
+  description: |
+    Generates and maintains documentation for the project's API, including endpoints, parameters, and examples.
+  parameters:
+    - name: "format"
+      type: "string"
+      required: false
+      default: "OpenAPI"
+
+examples:
+  - input: "ApiDocumentation"
+    expands_to: "Generate API documentation in the OpenAPI format."
+  - input: "ApiDocumentation[format=Blueprint]"
+    expands_to: "Generate API documentation in the API Blueprint format."
+
+tests:
+  - description: "Ensures the documentation is up to date."
+    input: "ApiDocumentation"
+    should_include: ["api", "docs", "generate"]
+
+related: ["ApiGateway"]

@@ -1,5 +1,32 @@
-name: "Backend Framework"
-description: "The framework used to build the backend."
-tags:
-  - "backend"
-  - "framework"
+meta:
+  id: "api.BackendFramework"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+
+keyword: "BackendFramework"
+namespace: "api"
+brief: "The framework used to build the backend."
+tokens_saved: 7
+
+definition:
+  description: |
+    Specifies the backend framework to be used for the project, such as Node.js, Django, or Ruby on Rails.
+  parameters:
+    - name: "framework"
+      type: "string"
+      required: false
+      default: "Node.js"
+
+examples:
+  - input: "BackendFramework"
+    expands_to: "Set up a new project with the Node.js framework."
+  - input: "BackendFramework[framework=Django]"
+    expands_to: "Set up a new project with the Django framework."
+
+tests:
+  - description: "Ensures the correct framework is installed."
+    input: "BackendFramework[framework=Node.js]"
+    should_include: ["node.js", "package.json"]
+
+related: ["FrontendFramework", "DatabaseSchema"]

@@ -1,5 +1,36 @@
-name: "User Authentication"
-description: "Handles user authentication and authorization."
-tags:
-  - "security"
-  - "user"
+meta:
+  id: "security.UserAuthentication"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+
+keyword: "UserAuthentication"
+namespace: "security"
+brief: "Handles user authentication and authorization."
+tokens_saved: 10
+
+definition:
+  description: |
+    Provides a complete system for user authentication, including registration, login, logout, and session management.
+  parameters:
+    - name: "withOAuth"
+      type: "boolean"
+      required: false
+      default: false
+    - name: "withMFA"
+      type: "boolean"
+      required: false
+      default: false
+
+examples:
+  - input: "UserAuthentication"
+    expands_to: "Create a user authentication system with login, logout, and registration."
+  - input: "UserAuthentication[withOAuth=true, withMFA=true]"
+    expands_to: "Create a user authentication system with login, logout, registration, OAuth support, and multi-factor authentication."
+
+tests:
+  - description: "Ensures basic login functionality."
+    input: "UserAuthentication"
+    should_include: ["login", "logout", "register"]
+
+related: ["ApiGateway", "DatabaseSchema"]

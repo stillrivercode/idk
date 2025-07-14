@@ -1,5 +1,32 @@
-name: "Feature Flags"
-description: "The strategy used for managing feature flags."
-tags:
-  - "feature-flags"
-  - "development"
+meta:
+  id: "development.FeatureFlags"
+  version: "0.1.0"
+  status: "draft"
+  authors: ["@stillrivercode"]
+
+keyword: "FeatureFlags"
+namespace: "development"
+brief: "The strategy used for managing feature flags."
+tokens_saved: 9
+
+definition:
+  description: |
+    Implements a system for managing feature flags, allowing features to be enabled or disabled without deploying new code.
+  parameters:
+    - name: "provider"
+      type: "string"
+      required: false
+      default: "in-house"
+
+examples:
+  - input: "FeatureFlags"
+    expands_to: "Implement an in-house feature flag system."
+  - input: "FeatureFlags[provider=LaunchDarkly]"
+    expands_to: "Integrate with LaunchDarkly for feature flag management."
+
+tests:
+  - description: "Ensures feature flags can be toggled."
+    input: "FeatureFlags"
+    should_include: ["feature", "toggle", "enabled"]
+
+related: ["DeploymentStrategy"]
