@@ -1,6 +1,6 @@
-const inquirer = require('inquirer');
-const fs = require('fs-extra');
-const { validateProjectName, validateGitHubOrg } = require('./validators');
+const inquirer = require("inquirer");
+const fs = require("fs-extra");
+const { validateProjectName, validateGitHubOrg } = require("./validators");
 
 /**
  * Validates project name and handles interactive/non-interactive modes
@@ -10,16 +10,16 @@ const { validateProjectName, validateGitHubOrg } = require('./validators');
  * @returns {Promise<string>} - The validated project name
  */
 async function validateAndGetProjectName(projectName, options) {
-  if (!projectName || projectName.trim() === '') {
+  if (!projectName || projectName.trim() === "") {
     if (options.nonInteractive) {
-      throw new Error('Project name is required in non-interactive mode');
+      throw new Error("Project name is required in non-interactive mode");
     }
 
     const { name } = await inquirer.prompt([
       {
-        type: 'input',
-        name: 'name',
-        message: 'Project name:',
+        type: "input",
+        name: "name",
+        message: "Project name:",
         validate: validateProjectName,
         filter: (input) => input.trim(),
       },
@@ -52,21 +52,21 @@ async function handleDirectoryConflict(projectPath, projectName, options) {
 
   if (options.nonInteractive) {
     throw new Error(
-      `Directory "${projectName}" already exists. Use --force to overwrite.`
+      `Directory "${projectName}" already exists. Use --force to overwrite.`,
     );
   }
 
   const { overwrite } = await inquirer.prompt([
     {
-      type: 'confirm',
-      name: 'overwrite',
+      type: "confirm",
+      name: "overwrite",
       message: `Directory "${projectName}" already exists. Overwrite?`,
       default: false,
     },
   ]);
 
   if (!overwrite) {
-    throw new Error('Operation cancelled');
+    throw new Error("Operation cancelled");
   }
 
   await fs.remove(projectPath);
@@ -79,10 +79,10 @@ async function handleDirectoryConflict(projectPath, projectName, options) {
  * @throws {Error} If template is invalid
  */
 function validateTemplate(template) {
-  const validTemplates = ['default', 'minimal', 'enterprise'];
+  const validTemplates = ["default", "minimal", "enterprise"];
   if (template && !validTemplates.includes(template)) {
     throw new Error(
-      `Invalid template "${template}". Valid options: ${validTemplates.join(', ')}`
+      `Invalid template "${template}". Valid options: ${validTemplates.join(", ")}`,
     );
   }
 }
@@ -98,7 +98,7 @@ function validateTemplate(template) {
 function validateNonInteractiveOptions(options) {
   if (options.nonInteractive && !options.githubOrg) {
     throw new Error(
-      'GitHub organization (--github-org) is required in non-interactive mode'
+      "GitHub organization (--github-org) is required in non-interactive mode",
     );
   }
 }

@@ -5,9 +5,10 @@
 **Context**:
 
 The project has gone through several iterations:
-1.  A collection of structured YAML files.
-2.  A CLI tool with a programmatic syntax (`expand Keyword[param=value]`).
-3.  A CLI tool with a natural language syntax (`SELECT Keyword with feature`).
+
+1. A collection of structured YAML files.
+2. A CLI tool with a programmatic syntax (`expand Keyword[param=value]`).
+3. A CLI tool with a natural language syntax (`SELECT Keyword with feature`).
 
 All of these approaches were deemed overly complex for the core goal of the project: to provide a simple, shared vocabulary for human-AI communication.
 
@@ -19,7 +20,7 @@ This approach prioritizes simplicity, maintainability, and ease of use over tech
 
 **Consequences**:
 
-*   The project is significantly simplified, with no need for a CLI tool, a complex file structure, or a validation script.
-*   The focus is shifted from building a tool to curating a high-quality dictionary of commands.
-*   The barrier to entry for contributors is lowered, as they only need to edit a single Markdown file.
-*   The project is more flexible, as users can easily copy, paste, and modify the commands to fit their specific needs.
+- The project is significantly simplified, with no need for a CLI tool, a complex file structure, or a validation script.
+- The focus is shifted from building a tool to curating a high-quality dictionary of commands.
+- The barrier to entry for contributors is lowered, as they only need to edit a single Markdown file.
+- The project is more flexible, as users can easily copy, paste, and modify the commands to fit their specific needs.

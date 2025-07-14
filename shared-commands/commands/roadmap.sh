@@ -93,19 +93,19 @@ fi
 # Function to extract insights from research document
 extract_research_insights() {
     local research_file="$1"
-    
+
     if [[ ! -f "$research_file" ]]; then
         log_error "Research document not found: $research_file"
         exit 1
     fi
-    
+
     # Log to stderr to avoid interfering with command substitution
     log_info "Extracting insights from research document: $research_file" >&2
-    
+
     # Extract key insights, conclusions, and recommendations
     # Look for common patterns in research documents
     local insights=""
-    
+
     # Extract from sections like "Key Findings", "Conclusions", "Recommendations"
     if grep -qi "key findings\|conclusions\|recommendations\|insights\|summary" "$research_file"; then
         insights=$(sed -n '/[Kk]ey [Ff]indings\|[Cc]onclusions\|[Rr]ecommendations\|[Ii]nsights\|[Ss]ummary/,/^#/p' "$research_file" | \
@@ -113,14 +113,14 @@ extract_research_insights() {
                    sed 's/^\s*[-*+]\s*//; s/^\s*[0-9]*\.\s*//' | \
                    head -10)
     fi
-    
+
     # If no structured insights found, extract bullet points and numbered lists
     if [[ -z "$insights" ]]; then
         insights=$(grep -E '^\s*[-*+]\s+|^\s*[0-9]+\.\s+' "$research_file" | \
                    sed 's/^\s*[-*+]\s*//; s/^\s*[0-9]*\.\s*//' | \
                    head -10)
     fi
-    
+
     # Clean and format insights
     if [[ -n "$insights" ]]; then
         echo "$insights" | while IFS= read -r line; do
@@ -168,7 +168,7 @@ if [[ "$GENERATE" == "true" ]]; then
         if [[ "$FINAL_INPUT" == *$'\n'* ]]; then
             FINAL_INPUT=$(echo "$FINAL_INPUT" | tr '\n' ',' | sed 's/,\+/,/g; s/,$//g; s/^,//g')
         fi
-        
+
         if [[ ! "$FINAL_INPUT" =~ ^[^,]+([[:space:]]*,[[:space:]]*[^,]+)*$ ]]; then
             log_error "Invalid input format. Use comma-separated goals without empty values."
             log_info "Example: --input \"Goal 1, Goal 2, Goal 3\""
@@ -217,22 +217,22 @@ if [[ "$GENERATE" == "true" ]]; then
         first_goal="${first_goal%"${first_goal##*[![:space:]]}"}"
         roadmap_title="$first_goal"
     fi
-    
+
     roadmap_description="This roadmap outlines the development plan for $roadmap_title, providing a structured approach to implementation across three phases."
 
     IFS=',' read -ra goals <<< "$FINAL_INPUT"
-    
+
     # Generate detailed features for each phase
     phase1_features=""
     phase2_features=""
     phase3_features=""
-    
+
     # Distribute goals across phases (1/3, 1/3, 1/3)
     total_goals=${#goals[@]}
     phase1_count=$(( (total_goals + 2) / 3 ))
     phase2_count=$(( (total_goals + 1) / 3 ))
     phase3_count=$(( total_goals - phase1_count - phase2_count ))
-    
+
     # Phase 1 - Foundation/MVP features
     for (( i=0; i<phase1_count && i<total_goals; i++ )); do
         goal="${goals[i]#"${goals[i]%%[![:space:]]*}"}"
@@ -242,8 +242,8 @@ if [[ "$GENERATE" == "true" ]]; then
         phase1_features+="    -   **Integration:** Establish foundational components.\\n"
         phase1_features+="\\n"
     done
-    
-    # Phase 2 - Enhancement features  
+
+    # Phase 2 - Enhancement features
     for (( i=phase1_count; i<phase1_count+phase2_count && i<total_goals; i++ )); do
         goal="${goals[i]#"${goals[i]%%[![:space:]]*}"}"
         goal="${goal%"${goal##*[![:space:]]}"}"
@@ -252,7 +252,7 @@ if [[ "$GENERATE" == "true" ]]; then
         phase2_features+="    -   **Optimization:** Improve performance and user experience.\\n"
         phase2_features+="\\n"
     done
-    
+
     # Phase 3 - Advanced features
     for (( i=phase1_count+phase2_count; i<total_goals; i++ )); do
         goal="${goals[i]#"${goals[i]%%[![:space:]]*}"}"
@@ -313,7 +313,7 @@ if [[ "$GENERATE" == "true" ]]; then
     sed -e "s/{{PHASE_1_FEATURES}}/$(escape_sed "$phase1_features")/g" \
         -e "s/{{PHASE_2_FEATURES}}/$(escape_sed "$phase2_features")/g" \
         -e "s/{{PHASE_3_FEATURES}}/$(escape_sed "$phase3_features")/g" > "$output_file"
-    
+
     # Convert \n to actual newlines in the output
     sed -i.bak 's/\\n/\
 /g' "$output_file" && rm -f "${output_file}.bak"

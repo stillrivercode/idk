@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       pull_request_number:
-        description: 'Pull Request number to fix'
+        description: "Pull Request number to fix"
         required: true
         type: number
 
@@ -51,13 +51,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Setup Python (for OpenRouter script)
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install OpenRouter dependencies
         run: |
@@ -73,7 +73,7 @@ jobs:
           path: ./security-artifacts/
           pr: ${{ inputs.pull_request_number }}
           workflow: quality-checks.yml
-          workflow_conclusion: ''
+          workflow_conclusion: ""
         continue-on-error: true
 
       - name: Process security scan results

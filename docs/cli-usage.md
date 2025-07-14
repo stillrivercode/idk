@@ -2,8 +2,8 @@
 
 ## Overview
 
-The Agentic Workflow Template CLI provides both interactive and non-interactive modes
-for creating AI-powered GitHub workflow automation projects.
+The Agentic Workflow Template CLI provides both interactive and non-interactive
+modes for creating AI-powered GitHub workflow automation projects.
 
 ## Installation & Usage
 
@@ -46,19 +46,19 @@ node cli/index.js my-project
 
 ### Template Options
 
-| Option                  | Description              | Values                             | Default   |
-| ----------------------- | ------------------------ | ---------------------------------- | --------- |
-| `--template <template>` | Project template variant | `default`, `minimal`, `enterprise` | `default` |
+| Option                  | Description              | Values                             |
+| ----------------------- | ------------------------ | ---------------------------------- |
+| `--template <template>` | Project template variant | `default`, `minimal`, `enterprise` |
 
 ### Non-Interactive Options
 
-| Option                  | Description                  | Example                        | Default               |
-| ----------------------- | ---------------------------- | ------------------------------ | --------------------- |
-| `--non-interactive`     | Run without prompts          | -                              | `false`               |
-| `--github-org <org>`    | GitHub organization/username | `--github-org mycompany`       | _prompted_            |
-| `--repo-name <name>`    | Repository name              | `--repo-name my-app`           | _project-name_        |
-| `--description <desc>`  | Project description          | `--description "My app"`       | _default description_ |
-| `--features <features>` | Comma-separated feature list | `--features ai-tasks,security` | _all features_        |
+| Option                  | Description                  | Example                        |
+| ----------------------- | ---------------------------- | ------------------------------ |
+| `--non-interactive`     | Run without prompts          | -                              |
+| `--github-org <org>`    | GitHub organization/username | `--github-org mycompany`       |
+| `--repo-name <name>`    | Repository name              | `--repo-name my-app`           |
+| `--description <desc>`  | Project description          | `--description "My app"`       |
+| `--features <features>` | Comma-separated feature list | `--features ai-tasks,security` |
 
 ### Available Features
 
@@ -152,9 +152,11 @@ The CLI creates a complete project structure with:
 
 ### Common Issues
 
-1. **NPX not working locally**: Use `npm run create-project` for local development
+1. **NPX not working locally**: Use `npm run create-project` for local
+   development
 2. **Permission errors**: Ensure you have write access to the target directory
-3. **Template not found**: Verify the template name is one of: `default`, `minimal`, `enterprise`
+3. **Template not found**: Verify the template name is one of: `default`,
+   `minimal`, `enterprise`
 4. **Interactive mode stuck**: Use `--non-interactive` with required options
 
 ### Debug Mode
@@ -221,15 +223,15 @@ For programmatic usage, see the exported functions in `cli/create-project.js`:
 ```javascript
 const {
   createProject,
-} = require('@stillrivercode/agentic-workflow-template/cli/create-project');
+} = require("@stillrivercode/agentic-workflow-template/cli/create-project");
 
-await createProject('my-project', {
+await createProject("my-project", {
   force: true,
   nonInteractive: true,
-  githubOrg: 'myorg',
-  repoName: 'my-project',
-  description: 'My project',
-  template: 'default',
-  features: 'ai-tasks,ai-pr-review',
+  githubOrg: "myorg",
+  repoName: "my-project",
+  description: "My project",
+  template: "default",
+  features: "ai-tasks,ai-pr-review",
 });
 ```

@@ -33,25 +33,25 @@ EOF
 validate_json() {
     local content="$1"
     local max_size="${2:-1048576}"  # 1MB default limit
-    
+
     # Check size limit
     if [[ ${#content} -gt $max_size ]]; then
         echo "JSON content exceeds size limit ($max_size bytes)" >&2
         return 1
     fi
-    
+
     # Basic JSON validation
     if ! echo "$content" | jq empty 2>/dev/null; then
         echo "Invalid JSON response" >&2
         return 1
     fi
-    
+
     # Check for potential injection patterns
     if echo "$content" | grep -qE '(\$\(|\`|eval|exec|system)'; then
         echo "JSON content contains potentially dangerous patterns" >&2
         return 1
     fi
-    
+
     return 0
 }
 

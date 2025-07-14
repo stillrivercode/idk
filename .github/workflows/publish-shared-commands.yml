@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'shared-commands/**'
+      - "shared-commands/**"
   workflow_dispatch:
 
 jobs:
@@ -22,8 +22,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: npm ci
@@ -37,12 +37,12 @@ jobs:
             # Get the previous commit to compare against
             PREVIOUS_SHA="${{ github.event.before }}"
             CURRENT_SHA="${{ github.sha }}"
-            
+
             echo "Analyzing commits from $PREVIOUS_SHA to $CURRENT_SHA"
-            
+
             # Get all commit subjects and bodies for shared-commands in this push
             COMMITS_CONTENT=$(git log --format="%s%n%b" $PREVIOUS_SHA..$CURRENT_SHA -- shared-commands/ || echo "")
-            
+
             if [[ -z "$COMMITS_CONTENT" ]]; then
               echo "No commits affecting shared-commands in this push. Using conventional-recommended-bump."
               if ! BUMP_TYPE=$(./node_modules/.bin/conventional-recommended-bump -p angular 2>/dev/null); then
@@ -52,10 +52,10 @@ jobs:
             else
               echo "Found commits affecting shared-commands:"
               echo "$COMMITS_CONTENT"
-              
+
               # Check for conventional commits that affect shared-commands
               CONVENTIONAL_COMMITS=$(echo "$COMMITS_CONTENT" | grep -E "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?: " || true)
-            
+
               if [[ -z "$CONVENTIONAL_COMMITS" ]]; then
                 echo "No conventional commits found for shared-commands. Defaulting to patch."
                 BUMP_TYPE="patch"

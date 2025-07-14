@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Emergency action to perform'
+        description: "Emergency action to perform"
         required: true
         type: choice
         options:
@@ -19,14 +19,14 @@ on:
           - circuit-breaker-reset
           - cost-limit-override
       reason:
-        description: 'Reason for emergency action'
+        description: "Reason for emergency action"
         required: true
         type: string
       override_cost_limit:
-        description: 'New temporary cost limit (for cost-limit-override only)'
+        description: "New temporary cost limit (for cost-limit-override only)"
         required: false
         type: string
-        default: ''
+        default: ""
 
 # Security controls - only repository admins should trigger this
 permissions:

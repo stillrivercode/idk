@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       pull_request_number:
-        description: 'Pull Request number to fix'
+        description: "Pull Request number to fix"
         required: true
         type: number
 
@@ -50,12 +50,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install OpenRouter dependencies
         run: |

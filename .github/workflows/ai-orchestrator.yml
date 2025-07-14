@@ -12,7 +12,7 @@ on:
   pull_request:
     types: [labeled]
   workflow_run:
-    workflows: ['Quality Checks']
+    workflows: ["Quality Checks"]
     types: [completed]
 
 # Security controls

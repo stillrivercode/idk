@@ -1,6 +1,6 @@
-const fs = require('fs-extra');
-const path = require('path');
-const chalk = require('chalk');
+const fs = require("fs-extra");
+const path = require("path");
+const chalk = require("chalk");
 
 /**
  * Validate and sanitize file path to prevent path traversal attacks
@@ -10,15 +10,15 @@ const chalk = require('chalk');
  */
 function sanitizePath(filePath) {
   // Remove any leading/trailing whitespace and null bytes
-  const cleanPath = filePath.replace(/[\0\r\n]/g, '').trim();
+  const cleanPath = filePath.replace(/[\0\r\n]/g, "").trim();
 
   // Check for path traversal attempts
   if (
-    cleanPath.includes('..') ||
+    cleanPath.includes("..") ||
     path.isAbsolute(cleanPath) ||
-    cleanPath.includes('\0') ||
-    cleanPath.startsWith('/') ||
-    cleanPath.startsWith('\\')
+    cleanPath.includes("\0") ||
+    cleanPath.startsWith("/") ||
+    cleanPath.startsWith("\\")
   ) {
     throw new Error(`Invalid file path: ${filePath}`);
   }
@@ -26,11 +26,11 @@ function sanitizePath(filePath) {
   // Validate path components don't contain dangerous characters
   const pathComponents = cleanPath.split(path.sep);
   for (const component of pathComponents) {
-    if (component === '.' || component === '..') {
+    if (component === "." || component === "..") {
       throw new Error(`Invalid path component: ${component} in ${filePath}`);
     }
     // Skip empty components (can happen with trailing slashes)
-    if (component === '') {
+    if (component === "") {
       continue;
     }
   }
@@ -40,7 +40,7 @@ function sanitizePath(filePath) {
 }
 
 // Load file list directly from package.json to ensure consistency
-const packageJson = require('../package.json');
+const packageJson = require("../package.json");
 
 /**
  * Get files to distribute based on template type
@@ -48,20 +48,20 @@ const packageJson = require('../package.json');
  * @param {string} templateType - The template type (default, minimal, enterprise)
  * @returns {string[]} Array of file paths to copy
  */
-function getFilesToDistribute(templateType = 'default') {
+function getFilesToDistribute(templateType = "default") {
   let filesToCopy = [...packageJson.files];
 
   // Filter out exclusion patterns (files starting with !)
-  filesToCopy = filesToCopy.filter((file) => !file.startsWith('!'));
+  filesToCopy = filesToCopy.filter((file) => !file.startsWith("!"));
 
   // For minimal template, exclude docs
-  if (templateType === 'minimal') {
-    filesToCopy = filesToCopy.filter((file) => !file.includes('docs/'));
+  if (templateType === "minimal") {
+    filesToCopy = filesToCopy.filter((file) => !file.includes("docs/"));
   }
 
   // For enterprise template, add enterprise-specific files if they exist
-  if (templateType === 'enterprise') {
-    const enterpriseFiles = ['monitoring/', 'advanced-scripts/'];
+  if (templateType === "enterprise") {
+    const enterpriseFiles = ["monitoring/", "advanced-scripts/"];
     filesToCopy.push(...enterpriseFiles);
   }
 
@@ -82,12 +82,12 @@ function getPackageFiles() {
  */
 function getExclusionFilters() {
   return [
-    'dev-docs/',
-    'tests/',
-    'venv/',
-    '.pytest_cache/',
-    'node_modules/',
-    '.git/',
+    "dev-docs/",
+    "tests/",
+    "venv/",
+    ".pytest_cache/",
+    "node_modules/",
+    ".git/",
   ];
 }
 
@@ -105,10 +105,10 @@ async function validateTemplateFiles(templateDir) {
 
   // Check required files from package.json
   const requiredFiles = [
-    '.pre-commit-config.yaml',
-    'package.json',
-    'README.md',
-    'LICENSE',
+    ".pre-commit-config.yaml",
+    "package.json",
+    "README.md",
+    "LICENSE",
   ];
 
   for (const file of requiredFiles) {
@@ -128,7 +128,7 @@ async function validateTemplateFiles(templateDir) {
   }
 
   // Check optional files (warnings only)
-  const optionalFiles = ['.yamllint.yaml', '.secrets.baseline'];
+  const optionalFiles = [".yamllint.yaml", ".secrets.baseline"];
 
   for (const file of optionalFiles) {
     try {
@@ -141,7 +141,7 @@ async function validateTemplateFiles(templateDir) {
     } catch (error) {
       result.warnings.push(file);
       console.error(
-        chalk.yellow(`Invalid optional file path: ${file} - ${error.message}`)
+        chalk.yellow(`Invalid optional file path: ${file} - ${error.message}`),
       );
     }
   }
@@ -159,7 +159,7 @@ async function validateTemplateFiles(templateDir) {
 async function copyTemplateFiles(
   templateDir,
   targetDir,
-  templateType = 'default'
+  templateType = "default",
 ) {
   const result = {
     success: true,
@@ -173,7 +173,7 @@ async function copyTemplateFiles(
   if (!validation.valid) {
     result.success = false;
     result.errors.push(
-      `Missing required files: ${validation.missing.join(', ')}`
+      `Missing required files: ${validation.missing.join(", ")}`,
     );
     return result;
   }
@@ -182,8 +182,8 @@ async function copyTemplateFiles(
   if (validation.warnings.length > 0) {
     console.log(
       chalk.yellow(
-        `  ⚠️  Optional files not found: ${validation.warnings.join(', ')}`
-      )
+        `  ⚠️  Optional files not found: ${validation.warnings.join(", ")}`,
+      ),
     );
   }
 
@@ -212,7 +212,7 @@ async function copyTemplateFiles(
       }
     } catch (error) {
       result.success = false;
-      if (error.message.includes('Invalid file path')) {
+      if (error.message.includes("Invalid file path")) {
         result.errors.push(`Security error - invalid file path: ${file}`);
       } else {
         result.errors.push(`Failed to copy ${file}: ${error.message}`);
@@ -236,7 +236,7 @@ async function updatePackageJsonFiles(packageJsonPath) {
     return true;
   } catch (error) {
     console.error(
-      chalk.red(`Failed to update package.json files: ${error.message}`)
+      chalk.red(`Failed to update package.json files: ${error.message}`),
     );
     return false;
   }
@@ -247,7 +247,7 @@ async function updatePackageJsonFiles(packageJsonPath) {
  * @param {string} templateType - Template type
  * @returns {object} Statistics about file distribution
  */
-function getDistributionStats(templateType = 'default') {
+function getDistributionStats(templateType = "default") {
   const filesToCopy = getFilesToDistribute(templateType);
   const baseFiles = packageJson.files.length;
 

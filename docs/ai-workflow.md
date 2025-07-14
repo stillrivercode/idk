@@ -1,7 +1,7 @@
 # AI Workflow Usage Guide
 
-This guide explains how to use the AI task orchestration system to automate development
-tasks using Claude Code and GitHub Actions.
+This guide explains how to use the AI task orchestration system to automate
+development tasks using Claude Code and GitHub Actions.
 
 ## Quick Start
 
@@ -16,7 +16,8 @@ tasks using Claude Code and GitHub Actions.
    - AI will create a feature branch `ai-task-{issue-number}`
    - Claude Code CLI will implement the requested feature
    - A pull request will be automatically created for review
-   - The `ai-task` label is automatically removed and replaced with `ai-completed`
+   - The `ai-task` label is automatically removed and replaced with
+     `ai-completed`
 
 ## Setting Up the System
 
@@ -36,11 +37,14 @@ tasks using Claude Code and GitHub Actions.
    Value: your-openrouter-api-key
    ```
 
-   **Note**: The system now uses OpenRouter API for multi-model support instead of direct Anthropic API.
+   **Note**: The system now uses OpenRouter API for multi-model support instead
+   of direct Anthropic API.
 
 2. **GitHub Token Configuration**
-   - **Required**: Set `GH_PAT` secret with a Personal Access Token (repo scope minimum)
-   - **Advanced**: Add workflow, write:packages, read:org scopes for cross-workflow triggering
+   - **Required**: Set `GH_PAT` secret with a Personal Access Token (repo scope
+     minimum)
+   - **Advanced**: Add workflow, write:packages, read:org scopes for
+     cross-workflow triggering
    - This token is required for PR creation and repository operations
 
 3. **Verify GitHub Actions**
@@ -64,8 +68,8 @@ tasks using Claude Code and GitHub Actions.
 
 ```markdown
 ❌ Bad: "Fix the login"
-✅ Good: "Fix login form validation to properly handle email format errors and show
-user-friendly messages"
+✅ Good: "Fix login form validation to properly handle email format errors and
+show user-friendly messages"
 ```
 
 ### Provide Context
@@ -213,7 +217,8 @@ gh issue list --label "ai-completed"
 
 ### Pull Request Not Created
 
-- Verify workflow permissions are sufficient (GH_PAT only needed for cross-workflow triggering)
+- Verify workflow permissions are sufficient (GH_PAT only needed for
+  cross-workflow triggering)
 - Check if branch already exists
 - Review GitHub Actions permissions settings
 
@@ -261,7 +266,8 @@ You can manually trigger an AI task by commenting on an issue:
 
 ### NPM Package Distribution
 
-The template now includes a shared commands system distributed as an NPM package:
+The template now includes a shared commands system distributed as an NPM
+package:
 
 - **Package**: `@stillrivercode/shared-commands`
 - **Installation**: `npm install -g @stillrivercode/shared-commands`
@@ -269,9 +275,12 @@ The template now includes a shared commands system distributed as an NPM package
 
 ### Available Commands
 
-- **analyze-issue**: Analyze existing GitHub issues for requirements and complexity
-- **create-spec-issue**: Create GitHub issues with detailed technical specifications
-- **roadmap**: Display or generate project roadmaps with title-based naming and automatic template generation
+- **analyze-issue**: Analyze existing GitHub issues for requirements and
+  complexity
+- **create-spec-issue**: Create GitHub issues with detailed technical
+  specifications
+- **roadmap**: Display or generate project roadmaps with title-based naming and
+  automatic template generation
 
 ### Automated Publishing
 
@@ -323,4 +332,5 @@ Track success metrics:
 - **AI Quality**: Improve task descriptions and context
 - **Team Adoption**: Provide training and examples
 
-For more advanced features and enterprise setup, see the full [roadmap documentation](../dev-docs/roadmap.md).
+For more advanced features and enterprise setup, see the full
+[roadmap documentation](../dev-docs/roadmap.md).

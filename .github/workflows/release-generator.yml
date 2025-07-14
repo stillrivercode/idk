@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       release-type:
-        description: 'Type of release to create'
+        description: "Type of release to create"
         required: false
-        default: 'auto'
+        default: "auto"
         type: choice
         options:
           - auto
@@ -15,18 +15,18 @@ on:
           - patch
           - prerelease
       enable-ai-enhancement:
-        description: 'Use AI to enhance release descriptions'
+        description: "Use AI to enhance release descriptions"
         required: false
         default: false
         type: boolean
       publish-npm:
-        description: 'Publish to npm registry'
+        description: "Publish to npm registry"
         required: false
         default: false
         type: boolean
   push:
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     types: [closed]
     branches:
@@ -236,7 +236,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         timeout-minutes: ${{ fromJSON(env.SETUP_TIMEOUT) }}
@@ -382,7 +382,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         timeout-minutes: ${{ fromJSON(env.SETUP_TIMEOUT) }}
@@ -542,7 +542,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         timeout-minutes: ${{ fromJSON(env.SETUP_TIMEOUT) }}
@@ -635,7 +635,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         timeout-minutes: ${{ fromJSON(env.SETUP_TIMEOUT) }}
@@ -895,7 +895,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install OpenRouter dependencies
         run: |
@@ -1051,8 +1051,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Verify version
         run: |

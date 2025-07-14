@@ -23,7 +23,7 @@ env:
 # 2. Add it as a secret named 'GH_PAT'
 # 3. Update the checkout and PR creation steps to use: token: ${{ secrets.GH_PAT }}
 
-'on':
+"on":
   issues:
     types: [labeled]
   issue_comment:
@@ -71,7 +71,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Setup environment for OpenRouter API
         env:

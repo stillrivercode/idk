@@ -1,6 +1,6 @@
-const chalk = require('chalk');
-const inquirer = require('inquirer');
-const { validateGitHubOrgIfProvided } = require('./project-validation');
+const chalk = require("chalk");
+const inquirer = require("inquirer");
+const { validateGitHubOrgIfProvided } = require("./project-validation");
 
 /**
  * Builds configuration from CLI options for non-interactive mode
@@ -10,32 +10,32 @@ const { validateGitHubOrgIfProvided } = require('./project-validation');
  */
 function buildNonInteractiveConfig(config, options) {
   console.log(
-    chalk.gray('Using non-interactive mode with provided options...')
+    chalk.gray("Using non-interactive mode with provided options..."),
   );
 
   // Set defaults from CLI options or use sensible defaults
-  config.template = options.template || 'default';
-  config.githubOrg = options.githubOrg || 'your-org';
+  config.template = options.template || "default";
+  config.githubOrg = options.githubOrg || "your-org";
   config.repositoryName = options.repoName || config.projectName;
   config.description =
-    options.description || 'AI-powered workflow automation project';
+    options.description || "AI-powered workflow automation project";
 
   // Parse features from comma-separated string or use defaults
   if (options.features) {
-    config.features = options.features.split(',').map((f) => f.trim());
+    config.features = options.features.split(",").map((f) => f.trim());
   } else {
     config.features = [
-      'ai-tasks',
-      'ai-pr-review',
-      'cost-monitoring',
-      'security',
+      "ai-tasks",
+      "ai-pr-review",
+      "cost-monitoring",
+      "security",
     ];
   }
 
   console.log(chalk.gray(`  Template: ${config.template}`));
   console.log(chalk.gray(`  GitHub Org: ${config.githubOrg}`));
   console.log(chalk.gray(`  Repository: ${config.repositoryName}`));
-  console.log(chalk.gray(`  Features: ${config.features.join(', ')}`));
+  console.log(chalk.gray(`  Features: ${config.features.join(", ")}`));
 }
 
 /**
@@ -47,58 +47,58 @@ function buildNonInteractiveConfig(config, options) {
 function createConfigurationQuestions(config, options) {
   const questions = [
     {
-      type: 'input',
-      name: 'githubOrg',
-      message: 'GitHub organization/username:',
+      type: "input",
+      name: "githubOrg",
+      message: "GitHub organization/username:",
       default: options.githubOrg,
       validate: (input) =>
-        input.trim().length > 0 || 'Organization is required',
+        input.trim().length > 0 || "Organization is required",
       filter: (input) => input.trim(),
       when: () => !options.githubOrg,
     },
     {
-      type: 'input',
-      name: 'repositoryName',
-      message: 'Repository name:',
+      type: "input",
+      name: "repositoryName",
+      message: "Repository name:",
       default: options.repoName || config.projectName,
       validate: (input) =>
-        input.trim().length > 0 || 'Repository name is required',
+        input.trim().length > 0 || "Repository name is required",
       filter: (input) => input.trim(),
       when: () => !options.repoName,
     },
     {
-      type: 'input',
-      name: 'description',
-      message: 'Project description:',
-      default: options.description || 'AI-powered workflow automation project',
+      type: "input",
+      name: "description",
+      message: "Project description:",
+      default: options.description || "AI-powered workflow automation project",
       when: () => !options.description,
     },
     {
-      type: 'checkbox',
-      name: 'features',
-      message: 'Select features to enable:',
+      type: "checkbox",
+      name: "features",
+      message: "Select features to enable:",
       choices: [
-        { name: 'AI Task Automation', value: 'ai-tasks', checked: true },
-        { name: 'AI PR Review', value: 'ai-pr-review', checked: true },
-        { name: 'Cost Monitoring', value: 'cost-monitoring', checked: true },
-        { name: 'Security Scanning', value: 'security', checked: true },
+        { name: "AI Task Automation", value: "ai-tasks", checked: true },
+        { name: "AI PR Review", value: "ai-pr-review", checked: true },
+        { name: "Cost Monitoring", value: "cost-monitoring", checked: true },
+        { name: "Security Scanning", value: "security", checked: true },
       ],
       when: () => !options.features,
     },
   ];
 
   // Add template question if not specified
-  if (!options.template || options.template === 'default') {
+  if (!options.template || options.template === "default") {
     questions.unshift({
-      type: 'list',
-      name: 'template',
-      message: 'Choose project template:',
+      type: "list",
+      name: "template",
+      message: "Choose project template:",
       choices: [
-        { name: 'Default (Recommended)', value: 'default' },
-        { name: 'Minimal (Basic workflows only)', value: 'minimal' },
-        { name: 'Enterprise (Advanced features)', value: 'enterprise' },
+        { name: "Default (Recommended)", value: "default" },
+        { name: "Minimal (Basic workflows only)", value: "minimal" },
+        { name: "Enterprise (Advanced features)", value: "enterprise" },
       ],
-      default: 'default',
+      default: "default",
     });
   }
 
@@ -114,12 +114,12 @@ function createConfigurationQuestions(config, options) {
  */
 function mergeConfigurationAnswers(config, options, answers) {
   Object.assign(config, {
-    template: options.template || answers.template || 'default',
+    template: options.template || answers.template || "default",
     githubOrg: options.githubOrg || answers.githubOrg,
     repositoryName: options.repoName || answers.repositoryName,
     description: options.description || answers.description,
     features: options.features
-      ? options.features.split(',').map((f) => f.trim())
+      ? options.features.split(",").map((f) => f.trim())
       : answers.features,
   });
 }
@@ -140,7 +140,7 @@ function shouldUseNonInteractiveMode(options) {
  * @returns {Promise<void>}
  */
 async function collectConfiguration(config, options) {
-  console.log(chalk.blue('\n📋 Project Configuration'));
+  console.log(chalk.blue("\n📋 Project Configuration"));
 
   // Use non-interactive mode if appropriate
   if (shouldUseNonInteractiveMode(options)) {

@@ -3,7 +3,7 @@ name: Security Review
 # This workflow performs automated security analysis when issues are labeled with 'security-review-needed'
 # It uses security scanning tools and AI-powered analysis to identify potential security issues
 
-'on':
+"on":
   issues:
     types: [labeled]
   pull_request:

@@ -30,18 +30,18 @@ The CLI validates API keys with the following checks:
 ```javascript
 function validateApiKey(key) {
   // Must start with 'sk-or-' (OpenRouter format)
-  if (!key.startsWith('sk-or-')) {
+  if (!key.startsWith("sk-or-")) {
     return 'OpenRouter API key should start with "sk-or-"';
   }
 
   // Length validation (20-200 characters)
   if (key.length < 20 || key.length > 200) {
-    return 'API key length is invalid';
+    return "API key length is invalid";
   }
 
   // Character validation (base64-like)
   if (!/^[a-zA-Z0-9-_]+$/.test(key)) {
-    return 'API key contains invalid characters';
+    return "API key contains invalid characters";
   }
 
   return true;

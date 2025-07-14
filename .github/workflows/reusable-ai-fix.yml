@@ -8,67 +8,67 @@ on:
   workflow_call:
     inputs:
       pr_number:
-        description: 'Pull request number to fix'
+        description: "Pull request number to fix"
         required: true
         type: number
       fix_type:
-        description: 'Type of fix to apply'
+        description: "Type of fix to apply"
         required: true
         type: string
         # Options: lint, security, tests, docs
       branch_name:
-        description: 'Branch name to work on'
+        description: "Branch name to work on"
         required: false
         type: string
-        default: ''
+        default: ""
       debug_mode:
-        description: 'Enable debug logging'
+        description: "Enable debug logging"
         required: false
         type: boolean
         default: false
       # Circuit breaker configuration
       circuit_breaker_threshold:
-        description: 'Max consecutive failures before circuit opens'
+        description: "Max consecutive failures before circuit opens"
         required: false
         type: number
         default: 3
       circuit_breaker_timeout:
-        description: 'Timeout before attempting recovery (minutes)'
+        description: "Timeout before attempting recovery (minutes)"
         required: false
         type: number
         default: 30
       # Cost control configuration
       max_daily_cost:
-        description: 'Maximum daily API spend in USD'
+        description: "Maximum daily API spend in USD"
         required: false
         type: number
         default: 50
       max_monthly_cost:
-        description: 'Maximum monthly API spend in USD'
+        description: "Maximum monthly API spend in USD"
         required: false
         type: number
         default: 500
       cost_alert_threshold:
-        description: 'Percentage of limit that triggers alerts'
+        description: "Percentage of limit that triggers alerts"
         required: false
         type: number
         default: 80
     secrets:
       openrouter_api_key:
-        description: 'OpenRouter API key for AI models'
+        description: "OpenRouter API key for AI models"
         required: true
       gh_pat:
-        description: 'GitHub Personal Access Token (optional - only needed if github.token insufficient for cross-workflow triggering)'
+        description: "GitHub Personal Access Token (optional - only needed if github.token insufficient for cross-workflow triggering)"
         required: false
     outputs:
       success:
-        description: 'Whether the fix was successful'
+        description: "Whether the fix was successful"
         value: ${{ jobs.ai-fix.outputs.success }}
       cost_used:
-        description: 'Estimated cost of the operation'
+        description: "Estimated cost of the operation"
         value: ${{ jobs.ai-fix.outputs.cost_used }}
       circuit_state:
-        description: 'Circuit breaker state after operation'
+        description: "Circuit breaker state after operation"
         value: ${{ jobs.ai-fix.outputs.circuit_state }}
 
 # Security controls
@@ -279,7 +279,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install OpenRouter dependencies
         run: |

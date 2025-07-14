@@ -1,6 +1,7 @@
 # Issue Labels Guide
 
-This document defines the standardized labeling system for GitHub issues in the agentic workflow template project.
+This document defines the standardized labeling system for GitHub issues in the
+agentic workflow template project.
 
 ## Label Categories
 
@@ -161,5 +162,5 @@ Use GitHub's label filtering to track:
 - **Documentation gaps**: `label:documentation` - content planning
 - **Community contributions**: `label:good-first-issue OR label:help-wanted`
 
-This labeling system helps maintain organization, improve discoverability, and facilitate effective
-project management across all phases of development.
+This labeling system helps maintain organization, improve discoverability, and
+facilitate effective project management across all phases of development.
