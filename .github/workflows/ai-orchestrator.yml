@@ -128,24 +128,27 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
         run: |
-          # Create AI analysis request
-          cat > ai_request.json << 'EOF'
-          {
-            "model": "${{ env.AI_MODEL }}",
-            "messages": [
-              {
-                "role": "system",
-                "content": "You are an expert in the Information Dense Keywords Dictionary project. Analyze GitHub issues and provide actionable insights. Focus on: 1) Categorizing the issue type, 2) Identifying if it relates to dictionary expansion, bug fixes, or documentation, 3) Suggesting specific implementation approaches, 4) Identifying dependencies or related issues, 5) Providing clear next steps."
-              },
-              {
-                "role": "user",
-                "content": "Analyze this GitHub issue:\n\nTitle: ${{ steps.issue_details.outputs.title }}\n\nBody:\n${{ steps.issue_details.outputs.body }}\n\nLabels: ${{ steps.issue_details.outputs.labels }}\n\nProvide a structured analysis with recommendations for implementation."
-              }
-            ],
-            "max_tokens": 1500,
-            "temperature": 0.2
-          }
-          EOF
+          # Create AI analysis request using jq for safe JSON construction
+          jq -n \
+            --arg model "$AI_MODEL" \
+            --arg title "${{ steps.issue_details.outputs.title }}" \
+            --arg body "${{ steps.issue_details.outputs.body }}" \
+            --arg labels "${{ steps.issue_details.outputs.labels }}" \
+            '{
+              model: $model,
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an expert in the Information Dense Keywords Dictionary project. Analyze GitHub issues and provide actionable insights. Focus on: 1) Categorizing the issue type, 2) Identifying if it relates to dictionary expansion, bug fixes, or documentation, 3) Suggesting specific implementation approaches, 4) Identifying dependencies or related issues, 5) Providing clear next steps."
+                },
+                {
+                  role: "user",
+                  content: "Analyze this GitHub issue:\n\nTitle: \($title)\n\nBody:\n\($body)\n\nLabels: \($labels)\n\nProvide a structured analysis with recommendations for implementation."
+                }
+              ],
+              max_tokens: 1500,
+              temperature: 0.2
+            }' > ai_request.json
 
           # Call OpenRouter API
           RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
@@ -237,24 +240,25 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
         run: |
-          # Create enhancement request
-          cat > ai_request.json << 'EOF'
-          {
-            "model": "${{ env.AI_MODEL }}",
-            "messages": [
-              {
-                "role": "system",
-                "content": "You are an expert in creating comprehensive command dictionaries for AI assistants. Review the existing dictionary and suggest specific improvements: 1) New commands that are commonly needed, 2) Better examples for existing commands, 3) Missing edge cases or variations, 4) Commands for emerging development practices. Maintain the existing format and style."
-              },
-              {
-                "role": "user",
-                "content": "Current dictionary content:\n\n${{ steps.current_dict.outputs.content }}\n\nSuggest specific enhancements to make this dictionary more comprehensive and useful for AI-human collaboration in software development."
-              }
-            ],
-            "max_tokens": 2000,
-            "temperature": 0.4
-          }
-          EOF
+          # Create enhancement request using jq for safe JSON construction
+          jq -n \
+            --arg model "$AI_MODEL" \
+            --arg content "${{ steps.current_dict.outputs.content }}" \
+            '{
+              model: $model,
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an expert in creating comprehensive command dictionaries for AI assistants. Review the existing dictionary and suggest specific improvements: 1) New commands that are commonly needed, 2) Better examples for existing commands, 3) Missing edge cases or variations, 4) Commands for emerging development practices. Maintain the existing format and style."
+                },
+                {
+                  role: "user",
+                  content: "Current dictionary content:\n\n\($content)\n\nSuggest specific enhancements to make this dictionary more comprehensive and useful for AI-human collaboration in software development."
+                }
+              ],
+              max_tokens: 2000,
+              temperature: 0.4
+            }' > ai_request.json
 
           # Call OpenRouter API
           RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
@@ -340,24 +344,25 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
         run: |
-          # Create validation request
-          cat > ai_request.json << 'EOF'
-          {
-            "model": "${{ env.AI_MODEL }}",
-            "messages": [
-              {
-                "role": "system",
-                "content": "You are a validator for the Information Dense Keywords Dictionary. Review changes to ensure: 1) Consistency with existing format and style, 2) Clear and actionable command definitions, 3) Realistic and helpful examples, 4) No ambiguity or conflicts with existing commands, 5) Proper grammar and formatting. Provide specific feedback on any issues found."
-              },
-              {
-                "role": "user",
-                "content": "Validate these changes to the dictionary:\n\n${{ steps.pr_changes.outputs.diff_content }}\n\nProvide detailed validation feedback and approve or request changes."
-              }
-            ],
-            "max_tokens": 1500,
-            "temperature": 0.1
-          }
-          EOF
+          # Create validation request using jq for safe JSON construction
+          jq -n \
+            --arg model "$AI_MODEL" \
+            --arg diff_content "${{ steps.pr_changes.outputs.diff_content }}" \
+            '{
+              model: $model,
+              messages: [
+                {
+                  role: "system",
+                  content: "You are a validator for the Information Dense Keywords Dictionary. Review changes to ensure: 1) Consistency with existing format and style, 2) Clear and actionable command definitions, 3) Realistic and helpful examples, 4) No ambiguity or conflicts with existing commands, 5) Proper grammar and formatting. Provide specific feedback on any issues found."
+                },
+                {
+                  role: "user",
+                  content: "Validate these changes to the dictionary:\n\n\($diff_content)\n\nProvide detailed validation feedback and approve or request changes."
+                }
+              ],
+              max_tokens: 1500,
+              temperature: 0.1
+            }' > ai_request.json
 
           # Call OpenRouter API
           RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \

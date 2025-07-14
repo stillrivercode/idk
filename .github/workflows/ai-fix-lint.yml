@@ -167,7 +167,7 @@ jobs:
 
             # Use AI via OpenRouter to fix the remaining issues
             echo "🤖 Using $AI_MODEL via OpenRouter to fix remaining lint issues..."
-            python ./scripts/openrouter-ai-helper.py \
+            ./scripts/openrouter-ai-helper.sh \
               --prompt-file .temp/fix_lint_prompt.md \
               --output-file .temp/ai_response.md \
               --model "$AI_MODEL" \

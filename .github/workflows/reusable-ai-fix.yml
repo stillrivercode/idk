@@ -350,7 +350,7 @@ jobs:
 
             # Execute AI via OpenRouter with secure output handling
             echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
-            python ./scripts/openrouter-ai-helper.py \
+            ./scripts/openrouter-ai-helper.sh \
               --prompt-file claude-prompt.txt \
               --output-file claude-response.txt \
               --model "$AI_MODEL" \
@@ -436,7 +436,7 @@ jobs:
 
           # Execute AI via OpenRouter with secure output handling
           echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
-          python ./scripts/openrouter-ai-helper.py \
+          ./scripts/openrouter-ai-helper.sh \
             --prompt-file security-prompt.txt \
             --output-file security-response.txt \
             --model "$AI_MODEL" \
@@ -511,7 +511,7 @@ jobs:
 
           # Execute AI via OpenRouter with secure output handling
           echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
-          python ./scripts/openrouter-ai-helper.py \
+          ./scripts/openrouter-ai-helper.sh \
             --prompt-file test-prompt.txt \
             --output-file test-response.txt \
             --model "$AI_MODEL" \
@@ -579,7 +579,7 @@ jobs:
 
           # Execute AI via OpenRouter with secure output handling
           echo "⚠️  SECURITY: AI output will be sanitized to prevent sensitive data exposure"
-          python ./scripts/openrouter-ai-helper.py \
+          ./scripts/openrouter-ai-helper.sh \
             --prompt-file docs-prompt.txt \
             --output-file docs-response.txt \
             --model "$AI_MODEL" \

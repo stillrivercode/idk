@@ -75,3 +75,12 @@ This document defines a set of commands and their meanings for a software develo
 
 **Example Prompt**:
 `pr CREATE --base main --head feature/new-login-flow --title "feat: Add new login flow" --body "This PR adds a new login button and the associated authentication logic."`
+
+---
+
+### comment
+
+**Definition**: When a user issues a `comment` command, they are asking you to add a comment to a GitHub issue or pull request.
+
+**Example Prompt**:
+`comment "Fixed the workflow script references and JSON construction issues" on this PR`
