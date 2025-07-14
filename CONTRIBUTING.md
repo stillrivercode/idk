@@ -34,7 +34,11 @@ The core dictionary is in [`information-dense-keywords.md`](information-dense-ke
 ## 🔧 Development Workflow
 
 1. **Fork and Clone**: Fork the repository and clone your fork
-2. **Create Branch**: Use descriptive branch names like `add-testing-commands` or `fix-definition-clarity`
+2. **Create Branch**: Use conventional branch names with prefixes:
+   - `feat/` for new features: `feat/database-commands`
+   - `fix/` for bug fixes: `fix/definition-clarity`
+   - `docs/` for documentation: `docs/usage-examples`
+   - `refactor/` for refactoring: `refactor/command-structure`
 3. **Make Changes**: Edit the dictionary or documentation
 4. **Test Changes**: Run `npm test` to validate markdown formatting
 5. **Commit**: Use conventional commit messages (e.g., `feat: add DATABASE command set`)
