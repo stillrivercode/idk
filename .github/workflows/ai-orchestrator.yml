@@ -1,0 +1,409 @@
+name: AI Task Orchestrator
+
+on:
+  issues:
+    types: [labeled, opened]
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: 'Type of AI task to run'
+        required: true
+        default: 'analyze-issue'
+        type: choice
+        options:
+          - analyze-issue
+          - enhance-dictionary
+          - generate-examples
+          - validate-commands
+      issue_number:
+        description: 'Issue number to process (if applicable)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  route-ai-task:
+    name: Route AI Task
+    runs-on: ubuntu-latest
+    outputs:
+      task_type: ${{ steps.determine_task.outputs.task_type }}
+      should_run: ${{ steps.determine_task.outputs.should_run }}
+      issue_number: ${{ steps.determine_task.outputs.issue_number }}
+      pr_number: ${{ steps.determine_task.outputs.pr_number }}
+
+    steps:
+      - name: Determine task type
+        id: determine_task
+        run: |
+          SHOULD_RUN="false"
+          TASK_TYPE=""
+          ISSUE_NUM=""
+          PR_NUM=""
+
+          # Manual dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SHOULD_RUN="true"
+            TASK_TYPE="${{ github.event.inputs.task_type }}"
+            ISSUE_NUM="${{ github.event.inputs.issue_number }}"
+
+          # Issue events
+          elif [ "${{ github.event_name }}" = "issues" ]; then
+            ISSUE_NUM="${{ github.event.issue.number }}"
+
+            # Check for specific labels
+            if echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q "ai-task"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="analyze-issue"
+            elif echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q "enhance-dictionary"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="enhance-dictionary"
+            elif echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q "generate-examples"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="generate-examples"
+            fi
+
+          # PR events
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+
+            if echo '${{ toJSON(github.event.pull_request.labels.*.name) }}' | grep -q "ai-validate"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="validate-commands"
+            fi
+          fi
+
+          echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
+          echo "task_type=$TASK_TYPE" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+
+          echo "Task routing: should_run=$SHOULD_RUN, task_type=$TASK_TYPE, issue=$ISSUE_NUM, pr=$PR_NUM"
+
+  analyze-issue:
+    name: Analyze Issue with AI
+    runs-on: ubuntu-latest
+    needs: route-ai-task
+    if: needs.route-ai-task.outputs.should_run == 'true' && needs.route-ai-task.outputs.task_type == 'analyze-issue'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get issue details
+        id: issue_details
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get issue content
+          ISSUE_DATA=$(gh api repos/${{ github.repository }}/issues/${{ needs.route-ai-task.outputs.issue_number }})
+
+          TITLE=$(echo "$ISSUE_DATA" | jq -r '.title')
+          BODY=$(echo "$ISSUE_DATA" | jq -r '.body // ""')
+          LABELS=$(echo "$ISSUE_DATA" | jq -r '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "labels=$LABELS" >> $GITHUB_OUTPUT
+
+      - name: Analyze with AI
+        id: ai_analysis
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
+        run: |
+          # Create AI analysis request
+          cat > ai_request.json << 'EOF'
+          {
+            "model": "${{ env.AI_MODEL }}",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are an expert in the Information Dense Keywords Dictionary project. Analyze GitHub issues and provide actionable insights. Focus on: 1) Categorizing the issue type, 2) Identifying if it relates to dictionary expansion, bug fixes, or documentation, 3) Suggesting specific implementation approaches, 4) Identifying dependencies or related issues, 5) Providing clear next steps."
+              },
+              {
+                "role": "user",
+                "content": "Analyze this GitHub issue:\n\nTitle: ${{ steps.issue_details.outputs.title }}\n\nBody:\n${{ steps.issue_details.outputs.body }}\n\nLabels: ${{ steps.issue_details.outputs.labels }}\n\nProvide a structured analysis with recommendations for implementation."
+              }
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.2
+          }
+          EOF
+
+          # Call OpenRouter API
+          RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @ai_request.json)
+
+          # Extract analysis
+          ANALYSIS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Analysis failed"')
+
+          echo "analysis<<EOF" >> $GITHUB_OUTPUT
+          echo "$ANALYSIS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post analysis comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMENT_BODY="## 🤖 AI Issue Analysis
+
+          ${{ steps.ai_analysis.outputs.analysis }}
+
+          ---
+
+          *This analysis was generated by AI to help with issue triage and planning. Use your judgment when implementing suggestions.*
+
+          **Next Steps:**
+          - Review the analysis and suggestions
+          - Add appropriate labels if needed
+          - Break down into smaller tasks if complex
+          - Assign to appropriate team members"
+
+          gh issue comment ${{ needs.route-ai-task.outputs.issue_number }} --body "$COMMENT_BODY"
+
+      - name: Auto-label based on analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Add processed label
+          gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "ai-analyzed"
+
+          # Add category labels based on content
+          ANALYSIS="${{ steps.ai_analysis.outputs.analysis }}"
+
+          if echo "$ANALYSIS" | grep -qi "dictionary.*command\|new.*command"; then
+            gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "enhancement"
+          fi
+
+          if echo "$ANALYSIS" | grep -qi "bug\|error\|fix"; then
+            gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "bug"
+          fi
+
+          if echo "$ANALYSIS" | grep -qi "documentation\|docs\|readme"; then
+            gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "documentation"
+          fi
+
+  enhance-dictionary:
+    name: Enhance Dictionary with AI
+    runs-on: ubuntu-latest
+    needs: route-ai-task
+    if: needs.route-ai-task.outputs.should_run == 'true' && needs.route-ai-task.outputs.task_type == 'enhance-dictionary'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Read current dictionary
+        id: current_dict
+        run: |
+          CONTENT=$(cat information-dense-keywords.md | head -200)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate enhancements
+        id: ai_enhancement
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
+        run: |
+          # Create enhancement request
+          cat > ai_request.json << 'EOF'
+          {
+            "model": "${{ env.AI_MODEL }}",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are an expert in creating comprehensive command dictionaries for AI assistants. Review the existing dictionary and suggest specific improvements: 1) New commands that are commonly needed, 2) Better examples for existing commands, 3) Missing edge cases or variations, 4) Commands for emerging development practices. Maintain the existing format and style."
+              },
+              {
+                "role": "user",
+                "content": "Current dictionary content:\n\n${{ steps.current_dict.outputs.content }}\n\nSuggest specific enhancements to make this dictionary more comprehensive and useful for AI-human collaboration in software development."
+              }
+            ],
+            "max_tokens": 2000,
+            "temperature": 0.4
+          }
+          EOF
+
+          # Call OpenRouter API
+          RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @ai_request.json)
+
+          # Extract suggestions
+          SUGGESTIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Enhancement failed"')
+
+          echo "suggestions<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUGGESTIONS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create enhancement issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_BODY="## 🤖 AI-Generated Dictionary Enhancements
+
+          The AI has analyzed the current dictionary and suggests the following improvements:
+
+          ${{ steps.ai_enhancement.outputs.suggestions }}
+
+          ---
+
+          **Implementation Notes:**
+          - Review each suggestion carefully
+          - Implement incrementally with separate PRs
+          - Ensure consistency with existing patterns
+          - Test examples with actual AI assistants
+
+          **Generated by:** AI Task Orchestrator
+          **Trigger:** ${{ github.event_name }} on issue #${{ needs.route-ai-task.outputs.issue_number }}"
+
+          gh issue create \
+            --title "🤖 Dictionary Enhancement Suggestions" \
+            --body "$ISSUE_BODY" \
+            --label "enhancement,ai-generated,dictionary"
+
+  validate-commands:
+    name: Validate Dictionary Commands
+    runs-on: ubuntu-latest
+    needs: route-ai-task
+    if: needs.route-ai-task.outputs.should_run == 'true' && needs.route-ai-task.outputs.task_type == 'validate-commands'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get PR changes
+        id: pr_changes
+        run: |
+          git fetch origin main
+          CHANGED_FILES=$(git diff origin/main...HEAD --name-only)
+
+          # Check if dictionary was modified
+          if echo "$CHANGED_FILES" | grep -q "information-dense-keywords.md"; then
+            echo "dictionary_changed=true" >> $GITHUB_OUTPUT
+
+            # Get the diff content
+            DIFF_CONTENT=$(git diff origin/main...HEAD information-dense-keywords.md)
+            echo "diff_content<<EOF" >> $GITHUB_OUTPUT
+            echo "$DIFF_CONTENT" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "dictionary_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate changes with AI
+        id: ai_validation
+        if: steps.pr_changes.outputs.dictionary_changed == 'true'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
+        run: |
+          # Create validation request
+          cat > ai_request.json << 'EOF'
+          {
+            "model": "${{ env.AI_MODEL }}",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are a validator for the Information Dense Keywords Dictionary. Review changes to ensure: 1) Consistency with existing format and style, 2) Clear and actionable command definitions, 3) Realistic and helpful examples, 4) No ambiguity or conflicts with existing commands, 5) Proper grammar and formatting. Provide specific feedback on any issues found."
+              },
+              {
+                "role": "user",
+                "content": "Validate these changes to the dictionary:\n\n${{ steps.pr_changes.outputs.diff_content }}\n\nProvide detailed validation feedback and approve or request changes."
+              }
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.1
+          }
+          EOF
+
+          # Call OpenRouter API
+          RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @ai_request.json)
+
+          # Extract validation
+          VALIDATION=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Validation failed"')
+
+          echo "validation<<EOF" >> $GITHUB_OUTPUT
+          echo "$VALIDATION" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post validation comment
+        if: steps.pr_changes.outputs.dictionary_changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMENT_BODY="## 🔍 AI Dictionary Validation
+
+          ${{ steps.ai_validation.outputs.validation }}
+
+          ---
+
+          *This validation was performed by AI to ensure dictionary quality and consistency.*
+
+          **Review Checklist:**
+          - [ ] Command definitions are clear and actionable
+          - [ ] Examples are realistic and helpful
+          - [ ] Format matches existing patterns
+          - [ ] No conflicts with existing commands
+          - [ ] Grammar and spelling are correct"
+
+          gh pr comment ${{ needs.route-ai-task.outputs.pr_number }} --body "$COMMENT_BODY"
+
+      - name: Add validation labels
+        if: steps.pr_changes.outputs.dictionary_changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ needs.route-ai-task.outputs.pr_number }} --add-label "ai-validated"
+
+          # Check validation result and add appropriate labels
+          if echo "${{ steps.ai_validation.outputs.validation }}" | grep -qi "approve\|good\|valid\|correct"; then
+            gh pr edit ${{ needs.route-ai-task.outputs.pr_number }} --add-label "ready-for-review"
+          elif echo "${{ steps.ai_validation.outputs.validation }}" | grep -qi "issue\|problem\|error\|change"; then
+            gh pr edit ${{ needs.route-ai-task.outputs.pr_number }} --add-label "needs-changes"
+          fi
