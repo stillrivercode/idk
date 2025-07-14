@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/stillrivercode/idk/compare/v1.1.0...v1.1.1) (2025-07-14)
+
+
+### Bug Fixes
+
+* add publishConfig to enable public npm publishing ([#12](https://github.com/stillrivercode/idk/issues/12)) ([8ed2b91](https://github.com/stillrivercode/idk/commit/8ed2b91381a69fd70357112f4e3220c6d4a18dae))
+
 # [1.1.0](https://github.com/stillrivercode/idk/compare/v1.0.0...v1.1.0) (2025-07-14)
 
 
