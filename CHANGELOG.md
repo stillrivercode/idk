@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/stillrivercode/idk/compare/v1.0.0...v1.1.0) (2025-07-14)
+
+
+### Features
+
+* add workflow_dispatch trigger to release workflow ([#10](https://github.com/stillrivercode/idk/issues/10)) ([657defb](https://github.com/stillrivercode/idk/commit/657defb7cd4a93cbf96c6e31bb82ae04fd70375d))
+
 # 1.0.0 (2025-07-14)
 
 
