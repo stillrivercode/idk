@@ -1,6 +1,6 @@
 # Information Dense Keywords Dictionary: Simple AI Communication
 
-**Quick Start**: [Skip to Current Implementation](#current-implementation) • **Research Date**: 2025-07-13
+**Quick Start**: See Current Implementation section below • **Research Date**: 2025-07-13
 **Project Type**: Open Source Community Initiative
 **Current Status**: MVP Implemented as Single Markdown Dictionary
 
@@ -13,7 +13,7 @@ Like shorthand for developers, IDKs compress common AI prompts into reusable key
 
 **Why This Matters**: This approach prioritizes simplicity and maintainability over complex technical solutions, providing a clear, shared vocabulary for human-AI collaboration that anyone can contribute to and use.
 
-## 💡 Current Implementation
+## Current Implementation
 
 ### Simple, Community-Driven Approach
 
@@ -102,7 +102,7 @@ The project's defensibility (moat) will be the network effect of its community-d
 
 ### Core Implementation (Implemented)
 
-```markdown
+```javascriptmarkdown
 # information-dense-keywords.md Structure
 ## Command Categories
 ### Development Commands
@@ -117,7 +117,7 @@ The project's defensibility (moat) will be the network effect of its community-d
 ### Quality Assurance
 - **test this**: Generate tests and validation...
 - **review this**: Perform code/security review...
-```
+```javascript
 
 ### Current Architecture
 
@@ -285,7 +285,7 @@ The project's defensibility (moat) will be the network effect of its community-d
 
 #### Current Dictionary Structure
 
-```markdown
+```javascriptmarkdown
 # information-dense-keywords.md Structure
 
 ## Command Categories
@@ -306,7 +306,7 @@ The project's defensibility (moat) will be the network effect of its community-d
 ### Workflow Commands
 - **plan this**: Break down complex tasks into manageable steps
 - **spec this**: Create detailed specifications and requirements
-```
+```javascript
 
 #### Current Implementation Details
 

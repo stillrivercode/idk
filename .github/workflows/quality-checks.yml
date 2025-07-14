@@ -67,22 +67,13 @@ jobs:
       - name: Run Node.js tests
         run: npm test
 
-      - name: Run shell script tests
+      - name: Run dictionary validation tests
         run: |
-          if [ -d "tests" ]; then
-            EXIT_CODE=0
-            for script in tests/test_*.sh; do
-              if [ -f "$script" ]; then
-                echo "Running $script"
-                if bash "$script"; then
-                  echo "✅ $script passed"
-                else
-                  echo "❌ $script failed with exit code $?"
-                  EXIT_CODE=1
-                fi
-              fi
-            done
-            exit $EXIT_CODE
+          if [ -d "tests" ] && [ -f "tests/run-all-tests.js" ]; then
+            echo "Running Information Dense Keywords Dictionary test suite"
+            node tests/run-all-tests.js
+          else
+            echo "No dictionary test suite found - skipping validation tests"
           fi
 
 

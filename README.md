@@ -1,31 +1,161 @@
 # Information Dense Keywords Dictionary
 
-This repository contains a dictionary of commands that an AI assistant can be trained to understand. The goal is to create a shared, efficient vocabulary for common software development tasks.
+A comprehensive, modular dictionary of commands for AI assistants in software development. This repository provides a shared, efficient vocabulary that makes human-AI collaboration more productive and consistent.
 
 ## 🎯 What You Get
 
-A curated list of action-oriented keywords that can be used to instruct an AI model. This provides a shared vocabulary for common development tasks, making human-AI collaboration more efficient.
+A curated collection of action-oriented keywords organized in a modular structure. Each command compresses common prompts into memorable keywords with comprehensive definitions and expected output formats.
 
 **Key Features:**
 
-- 📝 **Core command definitions** for SELECT, CREATE, DELETE, FIX, and more
-- 🤖 **AI-powered workflows** for automated issue analysis and dictionary enhancement
-- 🔧 **GitHub integration** with automated PR reviews and validation
-- 🛡️ **Robust CI/CD** with security scanning and emergency controls
+- 📚 **20+ command definitions** across Core, Development, Documentation, QA, Workflow, and Git categories
+- 🏗️ **Modular architecture** with organized `dictionary/` structure for easy navigation
+- 🔗 **Command chaining** support for complex workflows
+- 📋 **Expected Output Formats** for consistent, predictable results
+- 🔧 **GitHub integration** with automated workflows and validation
+- 🛡️ **Quality assurance** with security scanning and emergency controls
 
-## 💡 How to Use
+## 📦 Installation & Usage
 
-See the [AI Usage Guide](examples/ai-usage-guide.md) for a detailed explanation of how an AI assistant should use this dictionary.
+### For Individual Users
 
-### Quick Start
+#### Option 1: Direct Reference (Recommended)
 
-1. **For AI Assistants**: Reference the [command definitions](information-dense-keywords.md) to understand user intent
-2. **For Developers**: Use commands like `SELECT auth logic`, `CREATE login component`, or `FIX validation error`
-3. **For Contributors**: Add issues with labels like `ai-task` to trigger automated analysis
+1. **Bookmark the main index**: [Information Dense Keywords Dictionary](information-dense-keywords.md)
+2. **Copy commands directly** from the definitions when prompting your AI assistant
+3. **Chain commands** for complex workflows: `analyze this auth system then spec this improvement then plan this implementation`
+
+#### Option 2: Clone the Repository
+
+```bashbash
+# Clone the repository
+git clone https://github.com/stillriver/idk.git
+cd idk
+
+# Browse the dictionary
+open information-dense-keywords.md  # macOS
+xdg-open information-dense-keywords.md  # Linux
+start information-dense-keywords.md  # Windows
+```bash
+
+### For Teams & Organizations
+
+#### Option 1: Git Submodule
+
+```bashbash
+# Add as a submodule to your project
+git submodule add https://github.com/stillriver/idk.git docs/idk
+
+# Reference in your project documentation
+echo "See [IDK Dictionary](information-dense-keywords.md) for AI command reference" >> README.md
+```bash
+
+#### Option 2: Fork & Customize
+
+```bashbash
+# Fork the repository on GitHub
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/idk.git
+cd idk
+
+# Add your custom commands
+mkdir dictionary/custom
+# Add your team-specific commands to dictionary/custom/
+# Update information-dense-keywords.md with links to your custom commands
+```bash
+
+### For AI Assistant Developers
+
+#### Integration Instructions
+
+1. **Read the AI guidance**: [AI.md](AI.md), [CLAUDE.md](CLAUDE.md), [GEMINI.md](GEMINI.md)
+2. **Implement command recognition** using the definitions in `dictionary/`
+3. **Follow output formats** specified in each command definition
+4. **Support command chaining** as documented in the main index
+
+## 🚀 Quick Start Examples
+
+### Basic Commands
+
+```bash
+SELECT the authentication logic from auth.py
+CREATE a React login component
+FIX the validation error in user registration
+DELETE the unused styling files
+```bash
+
+### Advanced Commands
+
+```bash
+analyze this database schema for performance issues
+debug this memory leak in the payment processor
+optimize this query that's taking 10 seconds
+test this user service with comprehensive unit tests
+review this pull request for security vulnerabilities
+```bash
+
+### Command Chaining
+
+```bash
+research this OAuth2 patterns then spec this authentication system then plan this implementation
+analyze this API performance then optimize this bottleneck then test this solution
+```bash
+
+## 📁 Dictionary Structure
+
+```bash
+information-dense-keywords.md     # Main index with links to all commands
+dictionary/
+├── core/                        # SELECT, CREATE, DELETE, FIX
+├── development/                 # analyze this, debug this, optimize this
+├── documentation/               # document this, explain this, research this
+├── quality-assurance/          # test this, review this
+├── workflow/                   # plan this, spec this
+└── git/                       # commit, push, pr, gh, comment
+```bash
+
+## 🎓 Learning Path
+
+1. **Start with Core Commands**: Master SELECT, CREATE, DELETE, FIX
+2. **Explore by Category**: Pick a category that matches your workflow
+3. **Practice Command Chaining**: Combine commands for complex tasks
+4. **Customize for Your Team**: Add domain-specific commands as needed
+
+## 💡 Usage Tips
+
+- **Be Specific**: `analyze this authentication flow for security vulnerabilities` vs `analyze this`
+- **Chain Logically**: Use "then" for sequential operations, "and" for parallel
+- **Reference Files**: Include file paths and line numbers when possible
+- **Use Expected Formats**: Each command specifies its expected output structure
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) for more information.
+We welcome contributions! Here's how to help:
+
+1. **Add New Commands**: Create files in appropriate `dictionary/` subdirectories
+2. **Improve Definitions**: Enhance existing command documentation
+3. **Report Issues**: Use GitHub issues for bugs or feature requests
+4. **Share Usage Patterns**: Help us understand how teams use the dictionary
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## 📋 Command Categories
+
+| Category | Commands | Purpose |
+|----------|----------|---------|
+| **Core** | SELECT, CREATE, DELETE, FIX | Basic operations |
+| **Development** | analyze this, debug this, optimize this | Code analysis & improvement |
+| **Documentation** | document this, explain this, research this | Knowledge creation |
+| **Quality Assurance** | test this, review this | Testing & validation |
+| **Workflow** | plan this, spec this | Project planning |
+| **Git** | commit, push, pr, gh, comment | Version control |
+
+## 🔗 Related Resources
+
+- [AI Usage Guide](examples/ai-usage-guide.md) - Detailed implementation guidance
+- [Command Definitions](information-dense-keywords.md) - Complete command index
+- [Architecture Decision Records](adrs/) - Design decisions and evolution
+- [Roadmap](docs/roadmaps/ROADMAP.md) - Future development plans
 
 ## 📄 License
 

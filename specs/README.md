@@ -14,9 +14,9 @@ Each specification follows a standard format:
 
 Use the `spec this` command with your AI assistant:
 
-```bash
+```markdownbash
 spec this [feature/system description]
-```
+```markdown
 
 The AI will create a detailed specification in this directory covering:
 

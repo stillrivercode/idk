@@ -54,7 +54,7 @@ The core dictionary is in [`information-dense-keywords.md`](information-dense-ke
 
 ### Code Quality
 
-```bash
+```bashbash
 # Lint markdown files
 npm run lint:markdown
 
@@ -66,20 +66,20 @@ npm run format:check
 
 # Run all tests
 npm test
-```
+```bash
 
 ### Examples
 
 Good command definition:
 
-```markdown
+```bashmarkdown
 ### CREATE
 
 **Definition**: When a user issues a `CREATE` command, they are asking you to generate new code, files, or other project assets.
 
 **Example Prompt**:
 `CREATE a new React component called 'LoginButton' with a click handler that calls the 'handleLogin' function.`
-```
+```bash
 
 ## 🚀 Submitting Changes
 
