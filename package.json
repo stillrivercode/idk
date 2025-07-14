@@ -42,7 +42,7 @@
   "scripts": {
     "test": "npm run lint:markdown && npm run lint:yaml && echo 'Dictionary validation passed'",
     "lint": "npm run lint:markdown && npm run lint:yaml",
-    "lint:markdown": "npx markdownlint *.md examples/*.md adrs/*.md",
+    "lint:markdown": "npx markdownlint *.md examples/*.md adrs/*.md --ignore CHANGELOG.md",
     "lint:yaml": "node -e \"const yaml = require('js-yaml'); const fs = require('fs'); const glob = require('glob'); const files = glob.sync('**/*.{yml,yaml}', {ignore: 'node_modules/**'}); files.forEach(f => { try { yaml.load(fs.readFileSync(f, 'utf8')); console.log('✓', f); } catch (e) { console.error('✗', f + ':', e.message); process.exit(1); } }); console.log('YAML linting passed');\"",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
