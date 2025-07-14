@@ -36,6 +36,7 @@
   },
   "scripts": {
     "test": "npm run lint:markdown && echo 'Dictionary validation passed'",
+    "lint": "npm run lint:markdown",
     "lint:markdown": "npx markdownlint *.md examples/*.md adrs/*.md",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
