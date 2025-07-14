@@ -1,158 +1,470 @@
 name: AI PR Review
 
+# Centralized timeout configuration
+env:
+  AI_EXECUTION_TIMEOUT_MINUTES: ${{ vars.AI_EXECUTION_TIMEOUT_MINUTES || '10' }}
+
+# Triggers:
+# - When a PR is first opened or moves from draft to ready for review
+# - When ai-review-needed label is added to a PR
+# - When someone comments "/review" on a PR
+# Note: Removed 'synchronize' trigger to avoid running on every commit
+# Note: Bot comments are explicitly filtered to prevent infinite loops
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [main, develop]
+    types: [opened, labeled]
 
 permissions:
   contents: read
-  issues: write
   pull-requests: write
+  issues: write
+  checks: read
+  actions: read
+  # NOTE: This workflow uses GITHUB_TOKEN for GitHub API operations
+  # Uses declared permissions above for proper access control
+
+concurrency:
+  group: ai-workflows-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: true
 
 jobs:
-  ai-pr-review:
-    name: AI-Powered PR Review
-    runs-on: ubuntu-latest
+  review:
+    # Only run on PRs when opened, when ai-review-needed label is added, and not a draft, skip AI-generated branches
     if: >
-      !contains(github.event.pull_request.title, '[skip ai]') &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
-
+      github.event_name == 'pull_request' &&
+      (github.event.action == 'opened' ||
+       (github.event.action == 'labeled' && github.event.label.name == 'ai-review-needed')) &&
+      github.event.pull_request.draft == false &&
+      !startsWith(github.head_ref, 'fix/ai-') &&
+      !startsWith(github.head_ref, 'feature/ai-task-')
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Get PR data when triggered by comment
+        if: github.event_name == 'issue_comment'
+        id: get_pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const pr = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.issue.number
+            });
+
+            // Set outputs for later steps
+            core.setOutput('base_ref', pr.data.base.ref);
+            core.setOutput('head_ref', pr.data.head.ref);
+            core.setOutput('head_sha', pr.data.head.sha);
+            core.setOutput('body', pr.data.body || '');
+            core.setOutput('draft', pr.data.draft);
+
+            // Store PR data for later use
+            const prData = {
+              base: { ref: pr.data.base.ref },
+              head: { ref: pr.data.head.ref, sha: pr.data.head.sha },
+              body: pr.data.body || '',
+              draft: pr.data.draft
+            };
+
+            // Export as environment variable for other steps
+            core.exportVariable('PR_DATA', JSON.stringify(prData));
+
+      - name: Check for recent AI review
+        id: check_recent_review
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            // Get recent comments
+            const comments = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+              per_page: 100
+            });
+
+            // Check if there's a recent AI review (within last 5 minutes)
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            const recentAIReview = comments.data.find(comment =>
+              comment.user.login === 'github-actions[bot]' &&
+              comment.body.includes('🤖 AI Review by Claude') &&
+              new Date(comment.created_at) > fiveMinutesAgo
+            );
+
+            if (recentAIReview) {
+              console.log('Recent AI review found, skipping to prevent spam');
+              core.setOutput('skip', 'true');
+            } else {
+              core.setOutput('skip', 'false');
+            }
+
+      - name: Check test status
+        id: check_tests
+        if: github.event_name == 'pull_request' && steps.check_recent_review.outputs.skip != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            // Get the latest commit SHA
+            const sha = context.payload.pull_request.head.sha;
+
+            // Get all check runs for this commit
+            const { data: checkRuns } = await github.rest.checks.listForRef({
+              ...context.repo,
+              ref: sha
+            });
+
+            // Also get workflow runs for this commit
+            const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
+              ...context.repo,
+              head_sha: sha
+            });
+
+            // Look for test-related workflows or checks
+            const testChecks = checkRuns.check_runs.filter(check =>
+              check.name.toLowerCase().includes('test') ||
+              check.name.toLowerCase().includes('ci') ||
+              check.name.toLowerCase().includes('build')
+            );
+
+            const testWorkflows = workflowRuns.workflow_runs.filter(run =>
+              run.name.toLowerCase().includes('test') ||
+              run.name.toLowerCase().includes('ci') ||
+              run.name.toLowerCase().includes('build')
+            );
+
+            // Check if any tests are failing
+            const failedChecks = testChecks.filter(check => check.conclusion === 'failure');
+            const failedWorkflows = testWorkflows.filter(run => run.conclusion === 'failure');
+
+            const hasFailingTests = failedChecks.length > 0 || failedWorkflows.length > 0;
+
+            if (hasFailingTests) {
+              console.log('Tests are failing. AI review will be skipped.');
+              console.log('Failed checks:', failedChecks.map(c => c.name));
+              console.log('Failed workflows:', failedWorkflows.map(w => w.name));
+
+              // Create a comment explaining why review is skipped
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body: `## 🚨 AI Review Skipped - Tests Failing\n\n` +
+                      `The AI review has been skipped because one or more tests are currently failing.\n\n` +
+                      `**Failed tests:**\n` +
+                      `${failedChecks.map(c => `- ${c.name}: ${c.conclusion}`).join('\n')}\n` +
+                      `${failedWorkflows.map(w => `- ${w.name}: ${w.conclusion}`).join('\n')}\n\n` +
+                      `Please fix the failing tests first, then the AI review will run automatically.`
+              });
+
+              core.setOutput('result', 'false');
+              return false;
+            }
+
+            core.setOutput('result', 'true');
+            return true;
+
+      - name: Checkout code
+        if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
+          # Fetch the PR branch - use get_pr outputs for comment triggers
+          ref: ${{ github.event.pull_request.head.sha || steps.get_pr.outputs.head_sha || github.event.pull_request.head.ref || steps.get_pr.outputs.head_ref }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
+        uses: actions/setup-python@v5
         with:
-          node-version: "20"
-          cache: "npm"
+          python-version: '3.11'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Get PR changes
-        id: pr_changes
+      - name: Install OpenRouter dependencies
+        if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
         run: |
-          # Get the diff for this PR
-          git fetch origin main
-          DIFF=$(git diff origin/main...HEAD --name-only | head -20)
-          echo "files_changed<<EOF" >> $GITHUB_OUTPUT
-          echo "$DIFF" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          pip install openai==1.54.3 httpx==0.27.0
 
-          # Get the actual diff content (limited)
-          DIFF_CONTENT=$(git diff origin/main...HEAD | head -500)
-          echo "diff_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$DIFF_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Analyze PR with AI
-        id: ai_analysis
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
+      - name: Get PR diff
+        if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
+        id: diff
         run: |
-          # Create AI analysis request
-          cat > ai_request.json << 'EOF'
-          {
-            "model": "${{ env.AI_MODEL }}",
-            "messages": [
-              {
-                "role": "system",
-                "content": "You are an expert code reviewer specializing in the Information Dense Keywords Dictionary project. Review the provided PR changes and provide constructive feedback focusing on: 1) Dictionary content accuracy and clarity, 2) Documentation quality, 3) Consistency with existing patterns, 4) Security considerations, 5) Overall project goals alignment. Be concise but thorough."
-              },
-              {
-                "role": "user",
-                "content": "Please review this PR:\n\nTitle: ${{ github.event.pull_request.title }}\nDescription: ${{ github.event.pull_request.body }}\n\nFiles changed:\n${{ steps.pr_changes.outputs.files_changed }}\n\nDiff content:\n${{ steps.pr_changes.outputs.diff_content }}\n\nProvide a structured review with specific feedback and suggestions."
-              }
-            ],
-            "max_tokens": 2000,
-            "temperature": 0.3
-          }
+          # Get the base branch - use get_pr outputs for comment triggers
+          BASE_BRANCH="${{ github.event.pull_request.base.ref || steps.get_pr.outputs.base_ref || 'main' }}"
+
+          # Get the diff
+          git diff origin/${BASE_BRANCH}...HEAD > pr_diff.txt
+
+          # Also get list of changed files
+          git diff --name-only origin/${BASE_BRANCH}...HEAD > changed_files.txt
+
+          # Get PR description - use safe method to avoid shell interpretation
+          cat > pr_description.txt << 'EOF'
+          ${{ github.event.pull_request.body || steps.get_pr.outputs.body || '' }}
           EOF
 
-          # Call OpenRouter API
-          RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
-            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d @ai_request.json)
-
-          # Extract the review content
-          REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "AI review failed - check API key and model availability"')
-
-          # Save review to output
-          echo "review<<EOF" >> $GITHUB_OUTPUT
-          echo "$REVIEW" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Check for existing AI review comment
-        id: existing_comment
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Validate input files
+        if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
         run: |
-          # Look for existing AI review comment
-          COMMENT_ID=$(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
-            --jq '.[] | select(.body | startswith("## 🤖 AI Code Review")) | .id' | head -1)
-          echo "comment_id=$COMMENT_ID" >> $GITHUB_OUTPUT
+          # Check if required files exist
+          if [ ! -f pr_diff.txt ]; then
+            echo "Error: pr_diff.txt not found"
+            exit 1
+          fi
+          if [ ! -f changed_files.txt ]; then
+            echo "Error: changed_files.txt not found"
+            exit 1
+          fi
+          if [ ! -f pr_description.txt ]; then
+            echo "Error: pr_description.txt not found"
+            exit 1
+          fi
+          echo "All required files found"
 
-      - name: Post or update AI review comment
+      - name: Run AI Review via OpenRouter
+        if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
+        id: ai_review
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Format the review comment
-          COMMENT_BODY="## 🤖 AI Code Review
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }} # pragma: allowlist secret
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+        run: | # pragma: allowlist secret
+          # Validate API key exists  # pragma: allowlist secret
+          if [[ -z "$OPENROUTER_API_KEY" ]]; then  # pragma: allowlist secret
+            echo "## ⚠️ AI Review Failed" > review_output.md
+            echo "OPENROUTER_API_KEY not configured in repository secrets." >> review_output.md
+            exit 0
+          fi
 
-          ${{ steps.ai_analysis.outputs.review }}
+          # Create review prompt
+          cat > review_prompt.txt << EOF
+          Please review this pull request and provide feedback. Focus on:
+          1. Code quality and best practices
+          2. Potential bugs or issues
+          3. Security concerns
+          4. Performance implications
+          5. Test coverage
+          6. Documentation updates needed
 
-          ---
+          PR Description:
+          $(cat pr_description.txt)
 
-          *This review was generated by AI using ${{ env.AI_MODEL }}. Please use your judgment when considering the feedback.*
+          Changed files:
+          $(cat changed_files.txt)
 
-          💡 **Tips:**
-          - Add \`[skip ai]\` to PR title to skip AI review
-          - Add \`skip-ai-review\` label to disable for this PR
-          - Review suggestions are advisory, not blocking"
+          Diff (truncated to first 5000 lines if longer):
+          $(cat pr_diff.txt | head -5000)
 
-          if [ -n "${{ steps.existing_comment.outputs.comment_id }}" ]; then
-            # Update existing comment
-            gh api repos/${{ github.repository }}/issues/comments/${{ steps.existing_comment.outputs.comment_id }} \
-              --method PATCH \
-              --field body="$COMMENT_BODY"
-            echo "Updated existing AI review comment"
+          Please provide a structured review with:
+          - Summary of changes
+          - Strengths of the implementation
+          - Issues or concerns (if any)
+          - Suggestions for improvement
+          - Overall recommendation (approve, request changes, or comment)
+          EOF
+
+          # Create OpenRouter API script
+          cat > ai_review.py << 'EOF'
+          import os
+          import sys
+          import json
+          from openai import OpenAI
+
+          def main():
+              api_key = os.environ.get('OPENROUTER_API_KEY')
+              model = os.environ.get('AI_MODEL', 'anthropic/claude-3.5-sonnet')
+
+              if not api_key:
+                  print("## ⚠️ AI Review Failed")
+                  print("OPENROUTER_API_KEY not configured.")
+                  return 1
+
+              # Read the prompt
+              with open('review_prompt.txt', 'r') as f:
+                  prompt = f.read()
+
+              client = OpenAI(
+                  base_url="https://openrouter.ai/api/v1",
+                  api_key=api_key
+              )
+
+              try:
+                  response = client.chat.completions.create(
+                      model=model,
+                      messages=[
+                          {
+                              "role": "user",
+                              "content": prompt
+                          }
+                      ],
+                      extra_headers={
+                          "HTTP-Referer": "https://github.com",
+                          "X-Title": "AI PR Review"
+                      }
+                  )
+
+                  # Save the model used to a file
+                  with open('review_model.txt', 'w') as f:
+                      f.write(response.model)
+
+                  print(response.choices[0].message.content)
+                  return 0
+              except Exception as e:
+                  print("## ⚠️ AI Review Failed")
+                  print(f"Error: {str(e)}")
+                  print("")
+                  print("This could be due to:")
+                  print("- API rate limiting")
+                  print("- Large diff size")
+                  print("- Temporary service issues")
+                  print("")
+                  print("Please retry the review later or request manual review.")
+                  return 1
+
+          if __name__ == "__main__":
+              sys.exit(main())
+          EOF
+
+          # Run AI review with timeout
+          TIMEOUT_SECONDS=$((${AI_EXECUTION_TIMEOUT_MINUTES} * 60))
+          echo "🤖 Using $AI_MODEL via OpenRouter for PR review (timeout: ${AI_EXECUTION_TIMEOUT_MINUTES} minutes)..."  # pragma: allowlist secret
+          if ! timeout $TIMEOUT_SECONDS python ai_review.py > review_output.md; then
+            echo "## ⚠️ AI Review Failed" > review_output.md
+            echo "AI review could not be completed (timeout or error)." >> review_output.md
+            echo "" >> review_output.md
+            echo "This could be due to:" >> review_output.md
+            echo "- API rate limiting" >> review_output.md
+            echo "- Large diff size" >> review_output.md
+            echo "- Temporary service issues" >> review_output.md
+            echo "" >> review_output.md
+            echo "Please retry the review later or request manual review." >> review_output.md
+            echo "ai_review_failed=true" >> $GITHUB_OUTPUT
           else
-            # Create new comment
-            gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT_BODY"
-            echo "Created new AI review comment"
+            echo "ai_review_failed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Add review labels
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Add label to indicate AI review completed
-          gh pr edit ${{ github.event.pull_request.number }} --add-label "ai-reviewed"
+      - name: Post review comment
+        if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review_output.md', 'utf8');
+            let model = 'unknown';
+            try {
+              model = fs.readFileSync('review_model.txt', 'utf8').trim();
+            } catch (e) {
+              console.log("Could not read model file, using 'unknown'.");
+            }
 
-          # Check if review suggests changes and add appropriate label
-          if echo "${{ steps.ai_analysis.outputs.review }}" | grep -qi "issue\|concern\|problem\|fix\|improve"; then
-            gh pr edit ${{ github.event.pull_request.number }} --add-label "needs-changes"
-          fi
+            const comment = `## 🤖 AI Review\n\n${review}\n\n---\n` +
+                            `*This review was automatically generated by \`${model}\` via OpenRouter. Please consider it as supplementary feedback alongside human review.*`;
 
-      - name: Handle API failures
-        if: failure()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Post failure notice
-          gh pr comment ${{ github.event.pull_request.number }} --body \
-            "## ⚠️ AI Review Failed
+            // For PR events
+            if (context.eventName === 'pull_request') {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+            // For issue comments on PRs (when /review is used)
+            else if (context.eventName === 'issue_comment') {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
 
-            The automated AI review could not be completed. This might be due to:
-            - API key issues
-            - Model availability
-            - Network connectivity
+      - name: Handle AI review failure
+        if: steps.ai_review.outputs.ai_review_failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            // Add a label to indicate AI review failed (but not ai-review-needed to avoid loops)
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: context.issue.number,
+              labels: ['ai-review-failed']
+            });
 
-            Please proceed with manual review or contact maintainers if this persists."
+            // Fail the workflow step to indicate the review failure
+            core.setFailed('AI review failed - manual review needed');
+
+      - name: Add labels based on review
+        if: >
+          github.event_name == 'pull_request' &&
+          steps.check_tests.outputs.result == 'true' &&
+          steps.check_recent_review.outputs.skip != 'true' &&
+          steps.ai_review.outputs.ai_review_failed != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review_output.md', 'utf8').toLowerCase();
+
+            const labels = [];
+
+            // Helper function to check if a phrase indicates actual concern vs no concern
+            const hasActualConcern = (text, keywords) => {
+              for (const keyword of keywords) {
+                const regex = new RegExp(`(no|zero|minimal|none|without|negligible)\\s+${keyword}`, 'i');
+                if (regex.test(text)) {
+                  // Found negation before the keyword, so no actual concern
+                  return false;
+                }
+                if (text.includes(keyword)) {
+                  // Found keyword without negation
+                  return true;
+                }
+              }
+              return false;
+            };
+
+            // Add labels based on review content (avoid triggering AI fix workflows)
+            if (hasActualConcern(review, ['security concern', 'security issue', 'security vulnerability', 'security risk'])) {
+              labels.push('security-review-needed');
+            }
+            if (hasActualConcern(review, ['performance impact', 'performance implication', 'performance degradation', 'performance issue'])) {
+              labels.push('performance-impact');
+            }
+            if (hasActualConcern(review, ['breaking change', 'backward incompatible', 'backwards incompatible'])) {
+              labels.push('breaking-change');
+            }
+            if (review.includes('needs documentation') || review.includes('documentation needed') || review.includes('missing documentation')) {
+              labels.push('needs-docs');
+            }
+
+            labels.push('ai-reviewed');
+
+            // Filter out any labels that could trigger AI fix workflows to prevent loops
+            const filteredLabels = labels.filter(label =>
+              !label.startsWith('ai-fix-') &&
+              label !== 'ai-fix-lint' &&
+              label !== 'ai-fix-security' &&
+              label !== 'ai-fix-tests'
+            );
+
+            if (filteredLabels.length > 0) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: context.issue.number,
+                labels: filteredLabels
+              });
+            }
+
+      - name: Remove ai-review-needed label
+        if: >
+          github.event.action == 'labeled' &&
+          github.event.label.name == 'ai-review-needed' &&
+          steps.check_tests.outputs.result == 'true' &&
+          steps.check_recent_review.outputs.skip != 'true' &&
+          steps.ai_review.outputs.ai_review_failed != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            await github.rest.issues.removeLabel({
+              ...context.repo,
+              issue_number: context.issue.number,
+              name: 'ai-review-needed'
+            });
