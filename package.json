@@ -11,6 +11,9 @@
   ],
   "author": "Stillriver Code <noreply@stillrivercode.com>",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "homepage": "https://github.com/stillrivercode/idk#readme",
   "repository": {
     "type": "git",
