@@ -126,7 +126,7 @@ jobs:
         id: ai_analysis
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
         run: |
           # Create AI analysis request using jq for safe JSON construction
           jq -n \
@@ -238,7 +238,7 @@ jobs:
         id: ai_enhancement
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
         run: |
           # Create enhancement request using jq for safe JSON construction
           jq -n \
@@ -342,7 +342,7 @@ jobs:
         if: steps.pr_changes.outputs.dictionary_changed == 'true'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-3.5-sonnet' }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
         run: |
           # Create validation request using jq for safe JSON construction
           jq -n \

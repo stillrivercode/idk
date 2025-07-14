@@ -18,7 +18,7 @@ Usage: $0 --prompt-file FILE --output-file FILE [OPTIONS]
 Options:
     --prompt-file FILE     File containing the prompt (required)
     --output-file FILE     File to write the response (required)
-    --model MODEL          AI model to use (default: anthropic/claude-3.5-sonnet)
+    --model MODEL          AI model to use (default: anthropic/claude-sonnet-4)
     --title TITLE          Title for the request (default: AI Assistant)
     --validate-json        Validate if the response is valid JSON
     --help                 Show this help message
@@ -142,7 +142,7 @@ EOF
 main() {
     local prompt_file=""
     local output_file=""
-    local model="anthropic/claude-3.5-sonnet"
+    local model="anthropic/claude-sonnet-4"
     local title="AI Assistant"
     local validate_json_flag="false"
 
