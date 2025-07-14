@@ -6,9 +6,22 @@ This repository contains a dictionary of commands that an AI assistant can be tr
 
 A curated list of action-oriented keywords that can be used to instruct an AI model. This provides a shared vocabulary for common development tasks, making human-AI collaboration more efficient.
 
+**Key Features:**
+
+- 📝 **Core command definitions** for SELECT, CREATE, DELETE, FIX, and more
+- 🤖 **AI-powered workflows** for automated issue analysis and dictionary enhancement
+- 🔧 **GitHub integration** with automated PR reviews and validation
+- 🛡️ **Robust CI/CD** with security scanning and emergency controls
+
 ## 💡 How to Use
 
 See the [AI Usage Guide](examples/ai-usage-guide.md) for a detailed explanation of how an AI assistant should use this dictionary.
+
+### Quick Start
+
+1. **For AI Assistants**: Reference the [command definitions](information-dense-keywords.md) to understand user intent
+2. **For Developers**: Use commands like `SELECT auth logic`, `CREATE login component`, or `FIX validation error`
+3. **For Contributors**: Add issues with labels like `ai-task` to trigger automated analysis
 
 ## 🤝 Contributing
 
