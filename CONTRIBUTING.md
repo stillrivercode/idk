@@ -66,7 +66,7 @@ npm run format:check
 
 # Run all tests
 npm test
-```
+```bash
 
 ### Examples
 
@@ -79,7 +79,7 @@ Good command definition:
 
 **Example Prompt**:
 `CREATE a new React component called 'LoginButton' with a click handler that calls the 'handleLogin' function.`
-```
+```bash
 
 ## 🚀 Submitting Changes
 

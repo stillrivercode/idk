@@ -20,6 +20,12 @@ repos:
         entry: npx eslint --fix
         language: node
         types: [javascript, jsx, ts, tsx]
+      - id: dictionary-validation
+        name: Dictionary Validation Tests
+        entry: node tests/run-all-tests.js
+        language: node
+        files: ^(information-dense-keywords\.md|dictionary/.*\.md|tests/.*\.js)$
+        pass_filenames: false
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.41.0
     hooks:

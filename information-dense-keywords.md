@@ -1,86 +1,118 @@
-# AI Command Dictionary
+# Information Dense Keywords Dictionary
 
-This document defines a set of commands and their meanings for a software development AI assistant. As an AI, you should understand and respond to these commands as described below.
+This document serves as an index to a comprehensive vocabulary of commands for AI assistants in software development. Each command compresses common prompts into memorable keywords that save time and improve consistency.
+
+## Command Chaining
+
+Commands can be chained together to create complex workflows. When chaining commands, separate them with "then" or "and" to indicate sequential or parallel operations.
+
+### Chaining Examples
+
+**Sequential Chain**:
+`analyze this authentication system then spec this improved version then plan this implementation`
+
+**Parallel Operations**:
+`test this user service and document this API endpoint`
+
+**Complex Workflow**:
+`debug this performance issue then optimize this query then test this solution and document this change`
 
 ---
 
 ## Core Commands
 
-### SELECT
+Basic operations that form the foundation of the command vocabulary.
 
-**Definition**: When a user issues a `SELECT` command, they are asking you to find, retrieve, or explain information from the codebase or other resources. This is your primary command for information retrieval.
+- [**SELECT**](dictionary/core/select.md) - Find, retrieve, or explain information from codebase
+- [**CREATE**](dictionary/core/create.md) - Generate new code, files, or project assets
+- [**DELETE**](dictionary/core/delete.md) - Remove code, files, or project assets (with confirmation)
+- [**FIX**](dictionary/core/fix.md) - Debug and correct errors in code
 
-**Example Prompt**:
-`SELECT the user authentication logic from the 'auth.py' file and explain how it handles password hashing.`
+## Git Operations
 
----
+Commands for version control and GitHub interactions.
 
-### CREATE
+- [**gh**](dictionary/git/gh.md) - GitHub CLI namespace for GitHub operations
+- [**commit**](dictionary/git/commit.md) - Create git commits with well-formatted messages
+- [**push**](dictionary/git/push.md) - Push changes to remote repository
+- [**pr**](dictionary/git/pr.md) - Pull request operations (shorthand for `gh pr`)
+- [**comment**](dictionary/git/comment.md) - Add comments to GitHub issues or pull requests
 
-**Definition**: When a user issues a `CREATE` command, they are asking you to generate new code, files, or other project assets.
+## Development Commands
 
-**Example Prompt**:
-`CREATE a new React component called 'LoginButton' with a click handler that calls the 'handleLogin' function.`
+Commands for code analysis, debugging, and optimization.
 
----
+- [**analyze this**](dictionary/development/analyze-this.md) - Examine code/architecture for patterns and issues
+- [**debug this**](dictionary/development/debug-this.md) - Investigate issues and provide root cause solutions
+- [**optimize this**](dictionary/development/optimize-this.md) - Improve performance and efficiency
 
-### DELETE
+## Documentation Commands
 
-**Definition**: When a user issues a `DELETE` command, they are asking you to remove code, files, or other project assets. You should always ask for confirmation before executing a `DELETE` command.
+Commands for creating and maintaining project documentation.
 
-**Example Prompt**:
-`DELETE the unused 'old-styles.css' file and remove all references to it from the project.`
+- [**document this**](dictionary/documentation/document-this.md) - Create comprehensive documentation with examples
+- [**explain this**](dictionary/documentation/explain-this.md) - Provide clear, structured explanations
+- [**research this**](dictionary/documentation/research-this.md) - Investigate and gather comprehensive information
 
----
+## Quality Assurance Commands
 
-### FIX
+Commands for testing and code review.
 
-**Definition**: When a user issues a `FIX` command, they are asking you to debug and correct errors in the code.
+- [**test this**](dictionary/quality-assurance/test-this.md) - Generate comprehensive test suites
+- [**review this**](dictionary/quality-assurance/review-this.md) - Perform thorough code reviews
 
-**Example Prompt**:
-`FIX the 'TypeError' that occurs on line 42 of 'user_controller.js' when the user is not logged in.`
+## Workflow Commands
 
----
+Commands for project planning and specification.
 
-### gh
-
-**Definition**: A namespace for interacting with the GitHub CLI (`gh`). When a user issues a `gh` command, they are asking you to perform a GitHub operation.
-
-**Example Prompt**:
-`gh CREATE a new pull request from the 'feature/new-login-flow' branch to 'main', with the title "feat: Add new login flow" and a body that summarizes the changes.`
-
----
-
-### commit
-
-**Definition**: When a user issues a `commit` command, they are asking you to create a git commit with a well-formatted message.
-
-**Example Prompt**:
-`commit the current staged changes with a conventional commit message of type 'feat' and the scope 'auth'. The message should describe the addition of the new login button.`
+- [**plan this**](dictionary/workflow/plan-this.md) - Break down complex tasks into implementation plans
+- [**spec this**](dictionary/workflow/spec-this.md) - Create detailed technical specifications
 
 ---
 
-### push
+## Quick Reference
 
-**Definition**: When a user issues a `push` command, they are asking you to push changes to a remote repository.
-
-**Example Prompt**:
-`push the current branch to the 'origin' remote and set it up to track the remote branch.`
+| Command | Purpose | Category |
+|---------|---------|----------|
+| SELECT | Information retrieval | Core |
+| CREATE | Generate new assets | Core |
+| DELETE | Remove assets | Core |
+| FIX | Debug and correct | Core |
+| analyze this | Code analysis | Development |
+| debug this | Issue investigation | Development |
+| optimize this | Performance improvement | Development |
+| document this | Create documentation | Documentation |
+| explain this | Provide explanations | Documentation |
+| research this | Investigate topics | Documentation |
+| test this | Generate tests | Quality Assurance |
+| review this | Code review | Quality Assurance |
+| plan this | Implementation planning | Workflow |
+| spec this | Technical specifications | Workflow |
+| gh | GitHub operations | Git |
+| commit | Git commits | Git |
+| push | Push to remote | Git |
+| pr | Pull requests | Git |
+| comment | GitHub comments | Git |
 
 ---
 
-### pr
+## Contributing
 
-**Definition**: A shorthand for `gh pr`. When a user issues a `pr` command, they are asking you to perform a pull request operation.
+To add or modify commands:
 
-**Example Prompt**:
-`pr CREATE --base main --head feature/new-login-flow --title "feat: Add new login flow" --body "This PR adds a new login button and the associated authentication logic."`
+1. Add new commands to the appropriate `dictionary/` subdirectory
+2. Update this index file with a link to the new command
+3. Follow the established format for command definitions
+4. Include comprehensive Expected Output Formats
 
----
+## Dictionary Structure
 
-### comment
-
-**Definition**: When a user issues a `comment` command, they are asking you to add a comment to a GitHub issue or pull request.
-
-**Example Prompt**:
-`comment "Fixed the workflow script references and JSON construction issues" on this PR`
+```bash
+dictionary/
+├── core/                    # Core CRUD operations
+├── development/            # Development and analysis commands
+├── documentation/          # Documentation commands
+├── quality-assurance/      # Testing and review commands
+├── workflow/              # Planning and specification commands
+└── git/                   # Git and GitHub operations
+```bash
