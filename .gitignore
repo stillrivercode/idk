@@ -167,3 +167,4 @@ task_prompt_*.md
 claude_output_*.log
 security_prompt_*.md
 security_response_*.md
+.eslintcache

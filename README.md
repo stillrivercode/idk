@@ -1,4 +1,4 @@
-# AI Command Dictionary
+# Information Dense Keywords Dictionary
 
 This repository contains a dictionary of commands that an AI assistant can be trained to understand. The goal is to create a shared, efficient vocabulary for common software development tasks.
 

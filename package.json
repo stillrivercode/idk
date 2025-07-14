@@ -1,88 +1,43 @@
 {
-  "name": "@stillrivercode/agentic-workflow-template",
-  "version": "2.0.5",
-  "description": "NPM package to create AI-powered GitHub workflow automation projects",
+  "name": "@stillrivercode/information-dense-keywords",
+  "version": "0.1.0",
+  "description": "Information Dense Keywords Dictionary - A curated vocabulary for instructing AI assistants",
   "keywords": [
-    "github-actions",
     "ai",
-    "automation",
-    "workflow",
-    "template",
-    "cli"
+    "dictionary",
+    "commands",
+    "vocabulary",
+    "natural-language"
   ],
-  "author": "Still River Code <noreply@stillrivercode.com>",
+  "author": "Stillriver Code <noreply@stillrivercode.com>",
   "license": "MIT",
-  "homepage": "https://github.com/stillrivercode/agentic-workflow-template#readme",
+  "homepage": "https://github.com/stillrivercode/idk#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stillrivercode/agentic-workflow-template.git"
+    "url": "git+https://github.com/stillrivercode/idk.git"
   },
   "bugs": {
-    "url": "https://github.com/stillrivercode/agentic-workflow-template/issues"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "bin": {
-    "agentic-workflow-template": "./cli/index.js"
+    "url": "https://github.com/stillrivercode/idk/issues"
   },
   "files": [
-    "cli/",
-    "scripts/",
-    ".github/workflows/",
-    "!.github/workflows/release-generator.yml",
-    "docs/",
+    "information-dense-keywords.md",
     "README.md",
     "CLAUDE.md",
     "GEMINI.md",
+    "CONTRIBUTING.md",
     "LICENSE",
-    "install.sh",
-    "shared-commands/commands/",
-    "shared-commands/lib/",
-    "shared-commands/setup.sh",
-    "shared-commands/index.js",
-    "shared-commands/postinstall.js",
-    "shared-commands/README.md",
-    "package.json",
-    ".pre-commit-config.yaml",
-    ".yamllint.yaml",
-    ".secrets.baseline",
-    ".gitignore",
-    ".gitattributes",
-    ".env.example"
+    "ROADMAP.md",
+    "examples/",
+    "adrs/"
   ],
-  "dependencies": {
-    "chalk": "^4.1.2",
-    "commander": "^14.0.0",
-    "fs-extra": "^11.1.0",
-    "inquirer": "^8.2.6",
-    "js-yaml": "^4.1.0",
-    "validate-npm-package-name": "^6.0.1"
-  },
   "devDependencies": {
-    "eslint": "^9.30.1",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-security": "^3.0.1",
     "markdownlint-cli": "^0.45.0",
-    "npm-run-all": "^4.1.5",
-    "prettier": "^3.0.0",
-    "yaml-lint": "^1.7.0"
+    "prettier": "^3.0.0"
   },
   "scripts": {
-    "test": "npm run lint:markdown && echo 'Markdown validation passed'",
-    "lint": "eslint cli/",
-    "lint:fix": "eslint cli/ --fix",
-    "lint:cached": "eslint --cache cli/",
-    "lint:security": "eslint cli/",
-    "lint:yaml": "npx yaml-lint .github/workflows/*.yml .github/workflows/*.yaml *.yml *.yaml",
-    "lint:markdown": "npx markdownlint *.md docs/*.md",
-    "lint:all": "npm-run-all --parallel lint:cached lint:yaml lint:markdown format:check",
+    "test": "npm run lint:markdown && echo 'Dictionary validation passed'",
+    "lint:markdown": "npx markdownlint *.md examples/*.md adrs/*.md",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "setup": "echo 'Use: npx @stillrivercode/agentic-workflow-template <project-name>' && echo 'Example: npx @stillrivercode/agentic-workflow-template my-ai-project'",
-    "create-project": "node cli/index.js"
-  },
-  "main": "cli/index.js",
-  "preferGlobal": true
+    "format:check": "prettier --check ."
+  }
 }
