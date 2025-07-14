@@ -59,7 +59,7 @@ The modular dictionary structure provides comprehensive command definitions with
 
 **Output Structure** (following Expected Format):
 
-```bashmarkdown
+```markdown
 # Analysis Report: Authentication Flow
 
 ## Summary of Findings

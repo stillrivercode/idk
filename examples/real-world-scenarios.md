@@ -14,7 +14,7 @@ analyze this website performance during high traffic periods
 
 **AI Response** (following analyze-this.md format):
 
-```bashmarkdown
+```markdown
 # Analysis Report: E-commerce Performance During High Traffic
 
 ## Summary of Findings
@@ -87,7 +87,7 @@ analyze this user search functionality for security vulnerabilities
 
 **AI Response**:
 
-```bashmarkdown
+```markdown
 # Analysis Report: User Search Security
 
 ## Summary of Findings
@@ -203,7 +203,7 @@ SELECT the authentication system components then explain this OAuth2 implementat
 
 **Explanation Provided**:
 
-```bashmarkdown
+```markdown
 # Explanation: OAuth2 Authentication System
 
 ## What It Is
@@ -297,7 +297,7 @@ research this mobile API best practices then spec this social features API
 
 **API Specification**:
 
-```bashmarkdown
+```markdown
 # Technical Specification: Social Features API
 
 ## Overview

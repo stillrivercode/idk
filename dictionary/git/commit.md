@@ -32,21 +32,25 @@ Fixes #123
 ```
 
 ## Files Included
+
 - `src/components/LoginButton.jsx` - New login button component
 - `src/services/auth.js` - Updated authentication service
 - `src/styles/components.css` - Button styling
 
 ## Commit Details
+
 - **Branch**: feature/auth-improvements
 - **Hash**: `abc123def456`
 - **Author**: Developer Name
 - **Files Changed**: 3 modified, 1 added
 
 ## Pre-commit Checks
+
 ✅ Tests passed
 ✅ Linting successful
 ✅ Build completed
 ✅ No conflicts detected
+
 ```
 
 ## Commit Message Format

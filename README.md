@@ -27,7 +27,7 @@ A curated collection of action-oriented keywords organized in a modular structur
 
 #### Option 2: Clone the Repository
 
-```bashbash
+```bash
 # Clone the repository
 git clone https://github.com/stillriver/idk.git
 cd idk
@@ -42,7 +42,7 @@ start information-dense-keywords.md  # Windows
 
 #### Option 1: Git Submodule
 
-```bashbash
+```bash
 # Add as a submodule to your project
 git submodule add https://github.com/stillriver/idk.git docs/idk
 
@@ -52,7 +52,7 @@ echo "See [IDK Dictionary](information-dense-keywords.md) for AI command referen
 
 #### Option 2: Fork & Customize
 
-```bashbash
+```bash
 # Fork the repository on GitHub
 # Clone your fork
 git clone https://github.com/YOUR_USERNAME/idk.git

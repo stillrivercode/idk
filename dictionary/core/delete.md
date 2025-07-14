@@ -12,7 +12,7 @@
 
 ## Expected Output Format
 
-```bashmarkdown
+```markdown
 # Deletion Plan: [Target Description]
 
 ## ⚠️ Confirmation Required

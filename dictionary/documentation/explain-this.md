@@ -51,6 +51,7 @@ High-level description of the concept, component, or system.
 ## Summary
 
 Concise recap of the key points and takeaways.
+
 ```
 
 ## Explanation Types

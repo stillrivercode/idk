@@ -77,6 +77,7 @@ function authenticateUser(credentials) {
 - Coding standards adherence
 - Team conventions compliance
 - Industry best practices
+
 ```
 
 ## Review Categories

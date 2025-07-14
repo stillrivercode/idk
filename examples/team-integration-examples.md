@@ -82,7 +82,7 @@ CREATE monitoring dashboards then document this infrastructure
 
 **Template with IDK Commands**:
 
-```bashmarkdown
+```markdown
 ## Changes Made
 - `CREATE user notification service` with real-time updates
 - `test this notification functionality` with unit and integration tests
@@ -100,7 +100,7 @@ CREATE monitoring dashboards then document this infrastructure
 
 **Bug Report Template**:
 
-```bashmarkdown
+```markdown
 ## Issue Description
 `debug this payment processing error` - transactions failing at checkout
 
@@ -154,7 +154,7 @@ CREATE monitoring dashboards then document this infrastructure
 
 **Commit Message Templates**:
 
-```bashbash
+```bash
 # .gitmessage template
 # IDK Command: [command used]
 #
@@ -167,7 +167,7 @@ CREATE monitoring dashboards then document this infrastructure
 
 **Branch Naming Conventions**:
 
-```bashbash
+```bash
 # Pattern: {command-category}/{brief-description}
 git checkout -b development/analyze-payment-performance
 git checkout -b workflow/spec-notification-system
@@ -178,7 +178,7 @@ git checkout -b quality/test-user-service
 
 **README Template**:
 
-```bashmarkdown
+```markdown
 # Project Name
 
 ## Quick Start with IDK Commands
@@ -200,7 +200,7 @@ git checkout -b quality/test-user-service
 
 **Epic Breakdown using IDK**:
 
-```bashmarkdown
+```markdown
 ## Epic: User Dashboard Enhancement
 
 ### Research Phase
@@ -228,7 +228,7 @@ git checkout -b quality/test-user-service
 
 **Reviewer Checklist**:
 
-```bashmarkdown
+```markdown
 ## Code Review with IDK Commands
 
 ### Initial Review
@@ -251,7 +251,7 @@ git checkout -b quality/test-user-service
 
 **On-Call Runbook**:
 
-```bashmarkdown
+```markdown
 ## Production Incident Response
 
 ### Immediate Response (0-15 minutes)
@@ -281,7 +281,7 @@ git checkout -b quality/test-user-service
 
 **E-commerce Team**:
 
-```bashmarkdown
+```markdown
 # Custom commands in dictionary/custom/ecommerce/
 
 ## order this
@@ -295,7 +295,7 @@ git checkout -b quality/test-user-service
 
 **DevOps Team**:
 
-```bashmarkdown
+```markdown
 # Custom commands in dictionary/custom/devops/
 
 ## deploy this
@@ -333,7 +333,7 @@ research this data processing patterns then spec this ETL pipeline then CREATE d
 
 **Agenda Template**:
 
-```bashmarkdown
+```markdown
 ## Technical Design Review
 
 ### Preparation (Before Meeting)
@@ -355,7 +355,7 @@ research this data processing patterns then spec this ETL pipeline then CREATE d
 
 **Retrospective Format**:
 
-```bashmarkdown
+```markdown
 ## Sprint Retrospective with IDK
 
 ### What Worked Well
@@ -378,7 +378,7 @@ research this data processing patterns then spec this ETL pipeline then CREATE d
 
 **Custom Slash Commands**:
 
-```bashbash
+```bash
 /idk analyze this payment service performance
 /idk spec this user authentication requirements
 /idk debug this deployment pipeline failure
@@ -403,7 +403,7 @@ Would you like me to start the analysis?
 
 **Issue Templates with IDK**:
 
-```bashmarkdown
+```markdown
 ## Story Template
 **As a** developer
 **I want to** `spec this user registration feature`

@@ -54,7 +54,7 @@ The core dictionary is in [`information-dense-keywords.md`](information-dense-ke
 
 ### Code Quality
 
-```bashbash
+```bash
 # Lint markdown files
 npm run lint:markdown
 
@@ -72,7 +72,7 @@ npm test
 
 Good command definition:
 
-```bashmarkdown
+```markdown
 ### CREATE
 
 **Definition**: When a user issues a `CREATE` command, they are asking you to generate new code, files, or other project assets.
