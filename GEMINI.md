@@ -1,46 +1,26 @@
 # Gemini Project Context
 
-You are working with an AI-powered development workflow template.
+This project is a dictionary of commands that an AI assistant can be trained to understand. The goal is to create a shared, efficient vocabulary for common software development tasks.
 
-## Table of Contents
+## How to Use This Dictionary
 
-- [Key Concepts](#key-concepts)
-- [Architecture Context](#architecture-context)
-- [Common Commands](#common-commands)
-- [Workflow Context](#workflow-context)
-- [Cross-References](#cross-references)
+As an AI assistant, you should use the `idk-dictionary.md` file as your primary source of truth for understanding the user's intent. When a user issues a command, you should first try to match it to one of the keywords in the dictionary.
 
-## Key Concepts
+### Usage Pattern
 
-- **AI Tasks**: Issues labeled 'ai-task' trigger automated implementation
-- **OpenRouter**: All AI operations use OpenRouter API (not direct CLI)
-- **Shared Commands**: You share common commands with other agents. See the
-  `.ai/commands/` directory for details.
+1.  **Identify the Keyword**: Parse the user's prompt to identify the core command (e.g., `SELECT`, `CREATE`, `FIX`).
 
-## Architecture Context
+2.  **Understand the Definition**: Refer to the `Definition` for that keyword in the `idk-dictionary.md` to understand the user's high-level goal.
 
-### Technology Stack
+3.  **Extract Entities**: Identify the specific entities in the user's prompt. For example, in the prompt `CREATE a new React component called 'LoginButton'`, the entities are:
+    *   **Component Type**: React component
+    *   **Component Name**: LoginButton
 
-- **Platform**: GitHub Actions with OpenRouter API integration
-- **AI Models**: Multi-model support (Claude, Gemini, GPT-4, Llama via OpenRouter)
-- **Automation**: Bash scripts with Python utilities for AI workflow orchestration
-- **Version Control**: Git with automated semantic versioning
-- **Package Management**: npm with pyproject.toml for Python dependencies
-
-### Coding Conventions
-
-- **Shell Scripts**: Use bash with proper error handling (`set -euo pipefail`)
-- **Python**: Follow PEP 8 standards with pyproject.toml configuration
-- **Documentation**: Markdown with consistent formatting and anchor links
-- **Security**: Never commit secrets, use repository secrets for API keys
-- **Branching**: Always create feature branches, never work directly on main
-
-### Architectural Patterns
-
-- **Event-Driven**: GitHub Actions workflows triggered by labels and events
-- **Microservices**: Modular scripts in `scripts/` and `dev-scripts/` with shared libraries
-- **Template-Based**: Reusable document templates in `shared-commands/templates/`
-- **Cost-Controlled**: Built-in API usage monitoring and circuit breakers
+4.  **Execute the Command**: Based on the keyword and the extracted entities, perform the requested action. This may involve:
+    *   Searching for files in the codebase.
+    *   Generating new code.
+    *   Modifying existing code.
+    *   Running shell commands.
 
 ## AI Development Workflow
 
@@ -48,10 +28,10 @@ You are working with an AI-powered development workflow template.
 
 ### Recommended Workflow
 
-1. **Start with Research**: Use `analyze-issue` to understand the problem space
-2. **Update Roadmap**: Use `roadmap` to plan your features
-3. **Create Specifications**: Use `create-spec-issue` for detailed technical specs
-4. **Implement with AI**: Create implementation issues with the `ai-task` label
+1.  **Start with Research**: Use `analyze-issue` to understand the problem space
+2.  **Update Roadmap**: Use `roadmap` to plan your features
+3.  **Create Specifications**: Use `create-spec-issue` for detailed technical specs
+4.  **Implement with AI**: Create implementation issues with the `ai-task` label
 
 ### Common Commands
 
@@ -89,25 +69,18 @@ Remember: GitHub Actions use OpenRouter, not local CLI tools.
 
 ## Cross-References
 
-### Related Documentation
-
+- [idk-dictionary.md](idk-dictionary.md) - The core command dictionary.
 - [docs/ai-workflow-guide.md](docs/ai-workflow-guide.md) - Complete AI development workflow guide
 - [CLAUDE.md](CLAUDE.md) - Claude-specific context and instructions
 - [README.md](README.md) - Main project documentation and setup guide
 - [README-dev.md](README-dev.md) - Template development guide
 - [docs/simplified-architecture.md](docs/simplified-architecture.md) - Quick start guide
 - [dev-docs/architecture.md](dev-docs/architecture.md) - Advanced setup documentation
-
-### Workflow Documentation
-
 - [.github/workflows/](/.github/workflows/) - GitHub Actions workflow definitions
 - [scripts/](scripts/) - Automation scripts and utilities
 - [dev-scripts/](dev-scripts/) - Scripts for template development
 - [shared-commands/](shared-commands/) - Cross-AI compatible commands
 - [specs/](specs/) - Technical specification documents
-
-### Key Configuration Files
-
 - [pyproject.toml](pyproject.toml) - Python project configuration
 - [package.json](package.json) - Node.js dependencies and scripts
 - [.pre-commit-config.yaml](.pre-commit-config.yaml) - Code quality hooks
