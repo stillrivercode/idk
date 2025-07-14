@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.title, '[skip version]')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Bump version based on conventional commits
+        id: version
+        run: |
+          # Get PR title for conventional commit detection
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "PR title: $PR_TITLE"
+
+          # Current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Determine version bump type based on conventional commits in PR title
+          if echo "$PR_TITLE" | grep -qE "^(feat|feature)(\(.+\))?!:|^.+!:|BREAKING CHANGE:"; then
+            BUMP_TYPE="major"
+          elif echo "$PR_TITLE" | grep -qE "^(feat|feature)(\(.+\))?:"; then
+            BUMP_TYPE="minor"
+          elif echo "$PR_TITLE" | grep -qE "^(fix|bugfix|patch)(\(.+\))?:"; then
+            BUMP_TYPE="patch"
+          else
+            echo "No version bump needed for PR title type"
+            echo "bump=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Bump type: $BUMP_TYPE"
+          echo "bump=true" >> $GITHUB_OUTPUT
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+          # Calculate new version
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+
+          case $BUMP_TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          # Update package.json
+          npm version $NEW_VERSION --no-git-tag-version
+
+          # Commit the version bump
+          git add package.json
+          git commit -m "chore: bump version to $NEW_VERSION [skip version]"
+
+          # Create and push tag
+          git tag "v$NEW_VERSION"
+          git push origin main
+          git push origin "v$NEW_VERSION"
+
+      - name: Create Release
+        if: steps.version.outputs.bump == 'true'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.new_version }}
+          release_name: Release v${{ steps.version.outputs.new_version }}
+          body: |
+            Version ${{ steps.version.outputs.new_version }}
+
+            This release was automatically generated based on conventional commits.
+
+            Bump type: ${{ steps.version.outputs.bump_type }}
+            PR: #${{ github.event.pull_request.number }}
+          draft: false
+          prerelease: false
