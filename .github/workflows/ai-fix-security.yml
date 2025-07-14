@@ -61,7 +61,8 @@ jobs:
 
       - name: Install OpenRouter dependencies
         run: |
-          pip install openai==1.54.3 httpx==0.27.0
+          # Using shell script - no Python dependencies needed
+          echo "OpenRouter helper script uses curl and jq (available in Ubuntu)"
 
       - name: Install Node.js dependencies
         run: npm ci
@@ -171,7 +172,7 @@ jobs:
 
           # Use AI via OpenRouter to fix the issues
           echo "🤖 Using $AI_MODEL via OpenRouter to fix security issues..."
-          python ./scripts/openrouter-ai-helper.py \
+          ./scripts/openrouter-ai-helper.sh \
             --prompt-file fix_security_prompt.md \
             --output-file ai_security_response.md \
             --model "$AI_MODEL" \
