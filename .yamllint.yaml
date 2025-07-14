@@ -8,5 +8,5 @@ rules:
   comments:
     min-spaces-from-content: 1
   truthy:
-    allowed-values: ['true', 'false', 'on', 'off']
+    allowed-values: ["true", "false", "on", "off"]
   document-start: disable

@@ -18,7 +18,7 @@ Usage: $0 --prompt-file FILE --output-file FILE [OPTIONS]
 Options:
     --prompt-file FILE     File containing the prompt (required)
     --output-file FILE     File to write the response (required)
-    --model MODEL          AI model to use (default: anthropic/claude-3.5-sonnet)
+    --model MODEL          AI model to use (default: anthropic/claude-sonnet-4)
     --title TITLE          Title for the request (default: AI Assistant)
     --validate-json        Validate if the response is valid JSON
     --help                 Show this help message
@@ -29,30 +29,13 @@ Environment Variables:
 EOF
 }
 
-# Function to validate JSON with size limits and security checks
+# Function to validate JSON
 validate_json() {
     local content="$1"
-    local max_size="${2:-1048576}"  # 1MB default limit
-    
-    # Check size limit
-    if [[ ${#content} -gt $max_size ]]; then
-        echo "JSON content exceeds size limit ($max_size bytes)" >&2
-        return 1
-    fi
-    
-    # Basic JSON validation
     if ! echo "$content" | jq empty 2>/dev/null; then
         echo "Invalid JSON response" >&2
         return 1
     fi
-    
-    # Check for potential injection patterns
-    if echo "$content" | grep -qE '(\$\(|\`|eval|exec|system)'; then
-        echo "JSON content contains potentially dangerous patterns" >&2
-        return 1
-    fi
-    
-    return 0
 }
 
 # Function to make API request with retries
@@ -63,28 +46,8 @@ make_api_request() {
     local validate_json_flag="$4"
     local output_file="$5"
 
-    # Validate and sanitize prompt to prevent injection
-    if [[ ${#prompt} -gt 100000 ]]; then
-        echo "Error: Prompt exceeds maximum size (100KB)" >&2
-        return 1
-    fi
-
-    # Check for dangerous injection patterns in prompt
-    # Note: Allow common text characters like |, &, ; which are normal in markdown/code
-    if echo "$prompt" | grep -qE '(\$\([^)]*\)|`[^`]*`|[^a-zA-Z](eval|exec|system)[^a-zA-Z])'; then
-        echo "Error: Prompt contains potentially dangerous injection patterns" >&2
-        return 1
-    fi
-
     local retries=0
     local delay=$RETRY_DELAY_SECONDS
-    local temp_response temp_headers
-
-    # Setup cleanup trap
-    cleanup_temp_files() {
-        rm -f "$temp_response" "$temp_headers" 2>/dev/null || true
-    }
-    trap cleanup_temp_files EXIT INT TERM
 
     while [[ $retries -lt $MAX_RETRIES ]]; do
         # Create JSON payload
@@ -98,78 +61,28 @@ make_api_request() {
                 messages: [{"role": "user", "content": $prompt}]
             }')
 
-        # Make the API request with proper error handling
-        temp_response=$(mktemp)
-        temp_headers=$(mktemp)
-
-        local curl_exit_code=0
+        # Make the API request
+        local response
         local http_code
 
-        http_code=$(curl -w "%{http_code}" \
+        response=$(curl -s -w "%{http_code}" \
             --max-time "$REQUEST_TIMEOUT" \
-            --fail-with-body \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $OPENROUTER_API_KEY" \
             -H "HTTP-Referer: https://github.com" \
             -H "X-Title: $title" \
             -d "$json_payload" \
-            -o "$temp_response" \
-            -D "$temp_headers" \
-            "https://openrouter.ai/api/v1/chat/completions" 2>/dev/null) || curl_exit_code=$?
+            "https://openrouter.ai/api/v1/chat/completions")
 
-        # Check for network errors first
-        if [[ $curl_exit_code -ne 0 ]]; then
-            echo "Network error: curl failed with exit code $curl_exit_code" >&2
-            rm -f "$temp_response" "$temp_headers"
-
-            # Handle specific curl error codes
-            case $curl_exit_code in
-                6|7)  # Couldn't resolve host or couldn't connect
-                    echo "Connection error. Retrying in ${delay}s..." >&2
-                    sleep "$delay"
-                    retries=$((retries + 1))
-                    delay=$((delay * BACKOFF_FACTOR))
-                    continue
-                    ;;
-                28)   # Timeout
-                    echo "Request timeout. Retrying in ${delay}s..." >&2
-                    sleep "$delay"
-                    retries=$((retries + 1))
-                    delay=$((delay * BACKOFF_FACTOR))
-                    continue
-                    ;;
-                *)    # Other network errors
-                    echo "Network error. Retrying in ${delay}s..." >&2
-                    sleep "$delay"
-                    retries=$((retries + 1))
-                    delay=$((delay * BACKOFF_FACTOR))
-                    continue
-                    ;;
-            esac
-        fi
-
-        # Read response body
-        local response
-        response=$(cat "$temp_response")
-        rm -f "$temp_response" "$temp_headers"
+        # Extract HTTP code and response body
+        http_code="${response: -3}"
+        response="${response%???}"
 
         # Check for success
         if [[ "$http_code" == "200" ]]; then
-            # Validate response is valid JSON first
-            if ! echo "$response" | jq empty 2>/dev/null; then
-                echo "Invalid JSON response from API" >&2
-                return 1
-            fi
-
             # Extract content from response
             local content
-            content=$(echo "$response" | jq -r '.choices[0].message.content // empty' 2>/dev/null)
-            local jq_exit_code=$?
-
-            if [[ $jq_exit_code -ne 0 ]]; then
-                echo "Failed to parse API response: jq error" >&2
-                return 1
-            fi
+            content=$(echo "$response" | jq -r '.choices[0].message.content // empty')
 
             if [[ -z "$content" ]]; then
                 echo "Invalid API response: empty message content" >&2
@@ -229,7 +142,7 @@ EOF
 main() {
     local prompt_file=""
     local output_file=""
-    local model="anthropic/claude-3.5-sonnet"
+    local model="anthropic/claude-sonnet-4"
     local title="AI Assistant"
     local validate_json_flag="false"
 

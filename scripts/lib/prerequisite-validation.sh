@@ -420,7 +420,7 @@ validate_openrouter_api() {
     fi
 
     add_validation_info "OpenRouter API configured (using API instead of CLI)"
-    add_validation_info "AI Model: ${AI_MODEL:-anthropic/claude-3.5-sonnet}"
+    add_validation_info "AI Model: ${AI_MODEL:-anthropic/claude-sonnet-4}"
     add_validation_info "No CLI installation required - using direct API calls"
 }
 

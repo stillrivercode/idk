@@ -61,7 +61,8 @@ jobs:
 
       - name: Install OpenRouter dependencies
         run: |
-          pip install openai==1.54.3 httpx==0.27.0
+          # Using shell script - no Python dependencies needed
+          echo "OpenRouter helper script uses curl and jq (available in Ubuntu)"
 
       - name: Install Node.js dependencies
         run: npm ci
@@ -142,17 +143,16 @@ jobs:
           AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
         run: |
           # Create a comprehensive prompt for Claude
-          mkdir -p .temp
-          cat << 'PROMPT_EOF' > .temp/fix_security_prompt.md
+          cat << 'PROMPT_EOF' > fix_security_prompt.md
           I need help fixing security issues in this codebase. Here are the current security vulnerabilities:
 
           PROMPT_EOF
 
           # Append security issues content
-          cat security_issues.md >> .temp/fix_security_prompt.md
+          cat security_issues.md >> fix_security_prompt.md
 
           # Append rest of prompt safely
-          cat << 'PROMPT_EOF' >> .temp/fix_security_prompt.md
+          cat << 'PROMPT_EOF' >> fix_security_prompt.md
 
           Please help me fix these security issues by directly modifying the files in this repository. The fixes should:
           1. Address all identified security vulnerabilities
@@ -173,7 +173,7 @@ jobs:
           # Use AI via OpenRouter to fix the issues
           echo "🤖 Using $AI_MODEL via OpenRouter to fix security issues..."
           ./scripts/openrouter-ai-helper.sh \
-            --prompt-file .temp/fix_security_prompt.md \
+            --prompt-file fix_security_prompt.md \
             --output-file ai_security_response.md \
             --model "$AI_MODEL" \
             --title "AI Security Fix"

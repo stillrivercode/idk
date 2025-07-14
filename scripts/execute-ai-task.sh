@@ -52,12 +52,7 @@ source "$LIB_DIR/file-operations.sh"
 # Set up standard trap handlers only when running as main script
 setup_traps_if_main() {
     if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-        # Skip cleanup in GitHub Actions to avoid unbound variable issues
-        if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-            log_info "🚀 GitHub Actions detected - skipping cleanup traps"
-        else
-            setup_standard_traps "execute-ai-task"
-        fi
+        setup_standard_traps "execute-ai-task"
     fi
 }
 setup_traps_if_main

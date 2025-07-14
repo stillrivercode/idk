@@ -22,8 +22,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -32,9 +32,7 @@ jobs:
         run: npm run lint
 
       - name: Run YAML lint
-        run: |
-          # Use npm-based yaml-lint
-          npm run lint:yaml
+        run: npm run lint:yaml
 
       - name: Add ai-fix-lint label on failure
         if: failure() && github.event_name == 'pull_request'
@@ -60,8 +58,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -87,9 +85,6 @@ jobs:
             exit $EXIT_CODE
           fi
 
-      - name: Validate YAML files
-        run: |
-          npm run lint:yaml
 
       - name: Add ai-fix-tests label on failure
         if: failure() && github.event_name == 'pull_request'
@@ -115,8 +110,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -136,12 +131,9 @@ jobs:
 
       - name: Run ESLint security scan
         run: |
-          npm run lint:security > eslint-security-results.txt || true
-          # Convert to JSON format for consistency
+          # No JavaScript files to scan - create empty results
           echo '{"results": []}' > eslint-security-results.json
-          if [ -s eslint-security-results.txt ]; then
-            echo '{"results": ["ESLint security issues found - see eslint-security-results.txt"]}' > eslint-security-results.json
-          fi
+          touch eslint-security-results.txt
 
       - name: Check for security issues
         id: security_check

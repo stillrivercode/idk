@@ -1,516 +1,414 @@
-name: AI Orchestrator
-
-# AI Orchestrator workflow for coordinated multi-phase fixes
-# Centralized timeout configuration
-env:
-  WORKFLOW_TIMEOUT_MINUTES: 30
-  CLI_INSTALL_TIMEOUT_MINUTES: 5
-  AI_EXECUTION_TIMEOUT_MINUTES: ${{ vars.AI_EXECUTION_TIMEOUT_MINUTES || '10' }}
-  DEBUG_MODE: ${{ vars.AI_DEBUG_MODE || 'false' }}
+name: AI Task Orchestrator
 
 on:
+  issues:
+    types: [labeled, opened]
   pull_request:
     types: [labeled]
-  workflow_run:
-    workflows: ['Quality Checks']
-    types: [completed]
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: 'Type of AI task to run'
+        required: true
+        default: 'analyze-issue'
+        type: choice
+        options:
+          - analyze-issue
+          - enhance-dictionary
+          - generate-examples
+          - validate-commands
+      issue_number:
+        description: 'Issue number to process (if applicable)'
+        required: false
+        type: string
 
-# Security controls
 permissions:
   contents: write
   issues: write
   pull-requests: write
-  actions: read
-
-# Concurrency controls
-concurrency:
-  group: >
-    ai-orchestrator-${{ github.event.pull_request.number ||
-    (github.event.workflow_run.pull_requests[0] &&
-    github.event.workflow_run.pull_requests[0].number) || 'no-pr' }}
-  cancel-in-progress: false
 
 jobs:
-  check-trigger:
+  route-ai-task:
+    name: Route AI Task
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     outputs:
-      should-orchestrate: ${{ steps.pr_number.outputs.skip_job == 'true' && 'false' || steps.trigger_check.outputs.should_orchestrate || 'false' }}
-      needs-analysis: ${{ steps.quality_check.outputs.needs_analysis }}
-      pr-number: ${{ steps.pr_number.outputs.pr_number }}
-      quality-checks-failed: ${{ steps.quality_check.outputs.quality_checks_failed }}
-      trigger-type: ${{ steps.pr_number.outputs.skip_job == 'true' && 'skipped' || steps.trigger_check.outputs.trigger_type || 'unknown' }}
+      task_type: ${{ steps.determine_task.outputs.task_type }}
+      should_run: ${{ steps.determine_task.outputs.should_run }}
+      issue_number: ${{ steps.determine_task.outputs.issue_number }}
+      pr_number: ${{ steps.determine_task.outputs.pr_number }}
+
     steps:
-      - name: Debug event information
-        if: env.DEBUG_MODE == 'true'
+      - name: Determine task type
+        id: determine_task
         run: |
-          echo "🐛 DEBUG: Event information"
-          echo "Event name: ${{ github.event_name }}"
-          echo "Event action: ${{ github.event.action }}"
-          echo "Label name: ${{ github.event.label.name }}"
-          echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion }}"
-          echo "Workflow run head branch: ${{ github.event.workflow_run.head_branch }}"
-          echo "PR number (workflow_run): ${{
-            github.event.workflow_run.pull_requests[0] &&
-            github.event.workflow_run.pull_requests[0].number || 'none' }}"
-          echo "PR number (pull_request): ${{ github.event.pull_request.number }}"
+          SHOULD_RUN="false"
+          TASK_TYPE=""
+          ISSUE_NUM=""
+          PR_NUM=""
 
-      - name: Determine PR number
-        id: pr_number
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "🔍 Determining PR number from event: ${{ github.event_name }}"
+          # Manual dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SHOULD_RUN="true"
+            TASK_TYPE="${{ github.event.inputs.task_type }}"
+            ISSUE_NUM="${{ github.event.inputs.issue_number }}"
 
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # Validate and secure JSON handling for workflow_run.pull_requests
-            PR_NUMBER=""
-            PULL_REQUESTS_JSON='${{ toJson(github.event.workflow_run.pull_requests) }}'
+          # Issue events
+          elif [ "${{ github.event_name }}" = "issues" ]; then
+            ISSUE_NUM="${{ github.event.issue.number }}"
 
-            # Input validation - check if pull_requests is null, empty, or not an array
-            if [[ "$PULL_REQUESTS_JSON" == "null" ]] || [[ "$PULL_REQUESTS_JSON" == "" ]] || [[ "$PULL_REQUESTS_JSON" == "[]" ]]; then
-              echo "⚠️ No pull_requests array in workflow_run event or array is empty"
-              PR_NUMBER=""
-            else
-              # Secure JSON handling - write to temp file to avoid injection
-              echo "$PULL_REQUESTS_JSON" > /tmp/pr_data.json
-
-              # Validate JSON format before processing
-              if jq empty /tmp/pr_data.json 2>/dev/null; then
-                PR_NUMBER=$(jq -r 'if type == "array" and length > 0 then .[0].number // "" else "" end' /tmp/pr_data.json 2>/dev/null || echo "")
-              else
-                echo "❌ Invalid JSON format in pull_requests data"
-                PR_NUMBER=""
-              fi
-
-              # Clean up temp file
-              rm -f /tmp/pr_data.json
+            # Check for specific labels
+            if echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q "ai-task"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="analyze-issue"
+            elif echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q "enhance-dictionary"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="enhance-dictionary"
+            elif echo '${{ toJSON(github.event.issue.labels.*.name) }}' | grep -q "generate-examples"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="generate-examples"
             fi
 
-            # Additional debug logging for workflow_run events
-            echo "📋 workflow_run.pull_requests validation completed"
-            echo "📋 Extracted PR_NUMBER: $PR_NUMBER"
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-          else
-            echo "❌ Unsupported event type: ${{ github.event_name }}"
-            exit 1
-          fi
+          # PR events
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
 
-          # Always set skip_job output to ensure consistency
-          if [[ -z "$PR_NUMBER" || "$PR_NUMBER" == "null" || "$PR_NUMBER" == "" ]]; then
-            echo "⚠️ No PR number found in event - skipping orchestration"
-            echo "ℹ️ This workflow_run event is not associated with a PR"
-            # Skip the job gracefully instead of failing
-            echo "pr_number=" >> $GITHUB_OUTPUT
-            echo "skip_job=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "✅ Found PR number: $PR_NUMBER"
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          echo "skip_job=false" >> $GITHUB_OUTPUT
-
-      - name: Check orchestration trigger
-        id: trigger_check
-        if: steps.pr_number.outputs.skip_job != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER="${{ steps.pr_number.outputs.pr_number }}"
-          echo "🔍 Checking orchestration trigger for PR #$PR_NUMBER"
-
-          # Get current PR labels
-          LABELS=$(gh pr view $PR_NUMBER --json labels --jq '.labels[].name' | tr '\n' ' ')
-          echo "Current labels: $LABELS"
-
-          # Check for orchestration labels
-          if echo "$LABELS" | grep -E "(ai-fix-all|ai-orchestrate)" > /dev/null; then
-            echo "✅ Orchestration trigger found"
-            echo "should_orchestrate=true" >> $GITHUB_OUTPUT
-            echo "trigger_type=orchestration" >> $GITHUB_OUTPUT
-          elif echo "$LABELS" | grep -E "ai-fix-" > /dev/null; then
-            echo "✅ Single AI fix label found"
-            echo "should_orchestrate=true" >> $GITHUB_OUTPUT
-            echo "trigger_type=single_fix" >> $GITHUB_OUTPUT
-          else
-            echo "❌ No orchestration triggers found"
-            echo "should_orchestrate=false" >> $GITHUB_OUTPUT
-            echo "trigger_type=none" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Check quality check status
-        id: quality_check
-        if: steps.trigger_check.outputs.should_orchestrate == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER="${{ steps.pr_number.outputs.pr_number }}"
-          echo "🔍 Checking quality check status for PR #$PR_NUMBER"
-
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            # Quality check just completed
-            QUALITY_STATUS="${{ github.event.workflow_run.conclusion }}"
-            echo "Quality check conclusion: $QUALITY_STATUS"
-
-            if [[ "$QUALITY_STATUS" == "failure" ]]; then
-              echo "quality_checks_failed=true" >> $GITHUB_OUTPUT
-              echo "needs_analysis=true" >> $GITHUB_OUTPUT
-            else
-              echo "quality_checks_failed=false" >> $GITHUB_OUTPUT
-              echo "needs_analysis=false" >> $GITHUB_OUTPUT
+            if echo '${{ toJSON(github.event.pull_request.labels.*.name) }}' | grep -q "ai-validate"; then
+              SHOULD_RUN="true"
+              TASK_TYPE="validate-commands"
             fi
-          else
-            # Label was added - need to check if quality checks have run
-            echo "Label trigger - checking existing quality check status"
-            echo "quality_checks_failed=unknown" >> $GITHUB_OUTPUT
-            echo "needs_analysis=true" >> $GITHUB_OUTPUT
           fi
 
-  analyze-needs:
-    needs: check-trigger
-    if: needs.check-trigger.outputs.should-orchestrate == 'true' && needs.check-trigger.outputs.needs-analysis == 'true'
+          echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
+          echo "task_type=$TASK_TYPE" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+
+          echo "Task routing: should_run=$SHOULD_RUN, task_type=$TASK_TYPE, issue=$ISSUE_NUM, pr=$PR_NUM"
+
+  analyze-issue:
+    name: Analyze Issue with AI
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    outputs:
-      needs-lint: ${{ steps.analysis.outputs.needs_lint }}
-      needs-security: ${{ steps.analysis.outputs.needs_security }}
-      needs-tests: ${{ steps.analysis.outputs.needs_tests }}
-      needs-docs: ${{ steps.analysis.outputs.needs_docs }}
-      execution-plan: ${{ steps.analysis.outputs.execution_plan }}
+    needs: route-ai-task
+    if: needs.route-ai-task.outputs.should_run == 'true' && needs.route-ai-task.outputs.task_type == 'analyze-issue'
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get issue details
+        id: issue_details
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get issue content
+          ISSUE_DATA=$(gh api repos/${{ github.repository }}/issues/${{ needs.route-ai-task.outputs.issue_number }})
+
+          TITLE=$(echo "$ISSUE_DATA" | jq -r '.title')
+          BODY=$(echo "$ISSUE_DATA" | jq -r '.body // ""')
+          LABELS=$(echo "$ISSUE_DATA" | jq -r '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "labels=$LABELS" >> $GITHUB_OUTPUT
+
+      - name: Analyze with AI
+        id: ai_analysis
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+        run: |
+          # Create AI analysis request using jq for safe JSON construction
+          jq -n \
+            --arg model "$AI_MODEL" \
+            --arg title "${{ steps.issue_details.outputs.title }}" \
+            --arg body "${{ steps.issue_details.outputs.body }}" \
+            --arg labels "${{ steps.issue_details.outputs.labels }}" \
+            '{
+              model: $model,
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an expert in the Information Dense Keywords Dictionary project. Analyze GitHub issues and provide actionable insights. Focus on: 1) Categorizing the issue type, 2) Identifying if it relates to dictionary expansion, bug fixes, or documentation, 3) Suggesting specific implementation approaches, 4) Identifying dependencies or related issues, 5) Providing clear next steps."
+                },
+                {
+                  role: "user",
+                  content: "Analyze this GitHub issue:\n\nTitle: \($title)\n\nBody:\n\($body)\n\nLabels: \($labels)\n\nProvide a structured analysis with recommendations for implementation."
+                }
+              ],
+              max_tokens: 1500,
+              temperature: 0.2
+            }' > ai_request.json
+
+          # Call OpenRouter API
+          RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @ai_request.json)
+
+          # Extract analysis
+          ANALYSIS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Analysis failed"')
+
+          echo "analysis<<EOF" >> $GITHUB_OUTPUT
+          echo "$ANALYSIS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post analysis comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COMMENT_BODY="## 🤖 AI Issue Analysis
+
+          ${{ steps.ai_analysis.outputs.analysis }}
+
+          ---
+
+          *This analysis was generated by AI to help with issue triage and planning. Use your judgment when implementing suggestions.*
+
+          **Next Steps:**
+          - Review the analysis and suggestions
+          - Add appropriate labels if needed
+          - Break down into smaller tasks if complex
+          - Assign to appropriate team members"
+
+          gh issue comment ${{ needs.route-ai-task.outputs.issue_number }} --body "$COMMENT_BODY"
+
+      - name: Auto-label based on analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Add processed label
+          gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "ai-analyzed"
+
+          # Add category labels based on content
+          ANALYSIS="${{ steps.ai_analysis.outputs.analysis }}"
+
+          if echo "$ANALYSIS" | grep -qi "dictionary.*command\|new.*command"; then
+            gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "enhancement"
+          fi
+
+          if echo "$ANALYSIS" | grep -qi "bug\|error\|fix"; then
+            gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "bug"
+          fi
+
+          if echo "$ANALYSIS" | grep -qi "documentation\|docs\|readme"; then
+            gh issue edit ${{ needs.route-ai-task.outputs.issue_number }} --add-label "documentation"
+          fi
+
+  enhance-dictionary:
+    name: Enhance Dictionary with AI
+    runs-on: ubuntu-latest
+    needs: route-ai-task
+    if: needs.route-ai-task.outputs.should_run == 'true' && needs.route-ai-task.outputs.task_type == 'enhance-dictionary'
+
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Analyze PR needs
-        id: analysis
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Read current dictionary
+        id: current_dict
         run: |
-          PR_NUMBER="${{ needs.check-trigger.outputs.pr-number }}"
-          echo "🔍 Analyzing PR #$PR_NUMBER for fix requirements..."
+          CONTENT=$(cat information-dense-keywords.md | head -200)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          # Get PR labels to see what's already requested
-          EXISTING_LABELS=$(gh pr view $PR_NUMBER --json labels --jq '.labels[].name' | tr '\n' ' ')
-          echo "Existing labels: $EXISTING_LABELS"
+      - name: Generate enhancements
+        id: ai_enhancement
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+        run: |
+          # Create enhancement request using jq for safe JSON construction
+          jq -n \
+            --arg model "$AI_MODEL" \
+            --arg content "${{ steps.current_dict.outputs.content }}" \
+            '{
+              model: $model,
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an expert in creating comprehensive command dictionaries for AI assistants. Review the existing dictionary and suggest specific improvements: 1) New commands that are commonly needed, 2) Better examples for existing commands, 3) Missing edge cases or variations, 4) Commands for emerging development practices. Maintain the existing format and style."
+                },
+                {
+                  role: "user",
+                  content: "Current dictionary content:\n\n\($content)\n\nSuggest specific enhancements to make this dictionary more comprehensive and useful for AI-human collaboration in software development."
+                }
+              ],
+              max_tokens: 2000,
+              temperature: 0.4
+            }' > ai_request.json
 
-          # Check for existing quality check failures
-          NEEDS_LINT="false"
-          NEEDS_SECURITY="false"
-          NEEDS_TESTS="false"
-          NEEDS_DOCS="false"
+          # Call OpenRouter API
+          RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @ai_request.json)
 
-          # Check if quality check workflows have run and failed
-          # This is a simplified check - in practice, you'd query the specific workflow runs
-          if echo "$EXISTING_LABELS" | grep -q "ai-fix-lint"; then
-            NEEDS_LINT="true"
-          fi
+          # Extract suggestions
+          SUGGESTIONS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Enhancement failed"')
 
-          if echo "$EXISTING_LABELS" | grep -q "ai-fix-security"; then
-            NEEDS_SECURITY="true"
-          fi
+          echo "suggestions<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUGGESTIONS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          if echo "$EXISTING_LABELS" | grep -q "ai-fix-tests"; then
-            NEEDS_TESTS="true"
-          fi
+      - name: Create enhancement issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_BODY="## 🤖 AI-Generated Dictionary Enhancements
 
-          if echo "$EXISTING_LABELS" | grep -q "ai-fix-docs"; then
-            NEEDS_DOCS="true"
-          fi
+          The AI has analyzed the current dictionary and suggests the following improvements:
 
-          # If no specific labels found, analyze the PR changes
-          if [[ "$NEEDS_LINT" == "false" && "$NEEDS_SECURITY" == "false" && \
-                "$NEEDS_TESTS" == "false" && "$NEEDS_DOCS" == "false" ]]; then
-            echo "No specific fix labels found, analyzing PR changes..."
+          ${{ steps.ai_enhancement.outputs.suggestions }}
 
-            # Get list of changed files
-            gh pr diff $PR_NUMBER --name-only > changed-files.txt
+          ---
 
-            # Check if Python files are changed (need linting)
-            if grep -E '\.(py|pyi)$' changed-files.txt > /dev/null; then
-              NEEDS_LINT="true"
-              echo "Python files detected - enabling lint fixes"
-            fi
+          **Implementation Notes:**
+          - Review each suggestion carefully
+          - Implement incrementally with separate PRs
+          - Ensure consistency with existing patterns
+          - Test examples with actual AI assistants
 
-            # Check if security-sensitive files are changed
-            if grep -E '\.(py|js|ts|yaml|yml|json)$' changed-files.txt > /dev/null; then
-              NEEDS_SECURITY="true"
-              echo "Security-sensitive files detected - enabling security fixes"
-            fi
+          **Generated by:** AI Task Orchestrator
+          **Trigger:** ${{ github.event_name }} on issue #${{ needs.route-ai-task.outputs.issue_number }}"
 
-            # Check if test files are changed or new code needs tests
-            if grep -E 'test.*\.(py|js|ts)$|.*_test\.(py|js|ts)$|\.(spec|test)\.(js|ts)$' \
-                changed-files.txt > /dev/null; then
-              NEEDS_TESTS="true"
-              echo "Test files detected - enabling test fixes"
-            fi
+          gh issue create \
+            --title "🤖 Dictionary Enhancement Suggestions" \
+            --body "$ISSUE_BODY" \
+            --label "enhancement,ai-generated,dictionary"
 
-            # Check if documentation needs updates
-            if grep -E '\.(md|rst|txt)$|README|CHANGELOG' changed-files.txt > /dev/null; then
-              NEEDS_DOCS="true"
-              echo "Documentation files detected - enabling docs fixes"
-            fi
-          fi
-
-          # Create execution plan based on dependencies
-          EXECUTION_PLAN="[]"
-
-          if [[ "$NEEDS_LINT" == "true" ]]; then
-            EXECUTION_PLAN=$(echo "$EXECUTION_PLAN" | jq '. + [{"type": "lint", "priority": 1, "parallel": false}]')
-          fi
-
-          if [[ "$NEEDS_SECURITY" == "true" ]]; then
-            EXECUTION_PLAN=$(echo "$EXECUTION_PLAN" | jq '. + [{"type": "security", "priority": 2, "parallel": true}]')
-          fi
-
-          if [[ "$NEEDS_TESTS" == "true" ]]; then
-            EXECUTION_PLAN=$(echo "$EXECUTION_PLAN" | jq '. + [{"type": "tests", "priority": 3, "parallel": true}]')
-          fi
-
-          if [[ "$NEEDS_DOCS" == "true" ]]; then
-            EXECUTION_PLAN=$(echo "$EXECUTION_PLAN" | jq '. + [{"type": "docs", "priority": 4, "parallel": true}]')
-          fi
-
-          echo "Execution plan: $EXECUTION_PLAN"
-
-          # Set outputs
-          echo "needs_lint=$NEEDS_LINT" >> $GITHUB_OUTPUT
-          echo "needs_security=$NEEDS_SECURITY" >> $GITHUB_OUTPUT
-          echo "needs_tests=$NEEDS_TESTS" >> $GITHUB_OUTPUT
-          echo "needs_docs=$NEEDS_DOCS" >> $GITHUB_OUTPUT
-          echo "execution_plan=$EXECUTION_PLAN" >> $GITHUB_OUTPUT
-
-  # Phase 1: Lint fixes (must run first to clean up code style)
-  orchestrate-lint:
-    needs: [check-trigger, analyze-needs]
-    if: |
-      needs.check-trigger.outputs.should-orchestrate == 'true' &&
-      (needs.analyze-needs.outputs.needs-lint == 'true' || contains(github.event.label.name, 'lint'))
-    uses: ./.github/workflows/reusable-ai-fix.yml
-    with:
-      pr_number: ${{ fromJSON(needs.check-trigger.outputs.pr-number) }}
-      fix_type: lint
-      branch_name: >
-        ${{ github.event.pull_request.head.ref ||
-            (github.event.workflow_run.pull_requests[0] &&
-             github.event.workflow_run.pull_requests[0].head.ref) ||
-            github.event.workflow_run.head_branch }}
-      debug_mode: false
-    secrets:
-      openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
-      gh_pat: ${{ secrets.GH_PAT }}
-
-  # Phase 2: Security and Tests (can run in parallel after lint)
-  orchestrate-security:
-    needs: [check-trigger, analyze-needs, orchestrate-lint]
-    if: |
-      always() &&
-      needs.check-trigger.outputs.should-orchestrate == 'true' &&
-      (needs.analyze-needs.outputs.needs-security == 'true' || contains(github.event.label.name, 'security')) &&
-      (needs.orchestrate-lint.result == 'success' || needs.orchestrate-lint.result == 'skipped')
-    uses: ./.github/workflows/reusable-ai-fix.yml
-    with:
-      pr_number: ${{ fromJSON(needs.check-trigger.outputs.pr-number) }}
-      fix_type: security
-      branch_name: >
-        ${{ github.event.pull_request.head.ref ||
-            (github.event.workflow_run.pull_requests[0] &&
-             github.event.workflow_run.pull_requests[0].head.ref) ||
-            github.event.workflow_run.head_branch }}
-      debug_mode: false
-    secrets:
-      openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
-      gh_pat: ${{ secrets.GH_PAT }}
-
-  orchestrate-tests:
-    needs: [check-trigger, analyze-needs, orchestrate-lint]
-    if: |
-      always() &&
-      needs.check-trigger.outputs.should-orchestrate == 'true' &&
-      (needs.analyze-needs.outputs.needs-tests == 'true' || contains(github.event.label.name, 'tests')) &&
-      (needs.orchestrate-lint.result == 'success' || needs.orchestrate-lint.result == 'skipped')
-    uses: ./.github/workflows/reusable-ai-fix.yml
-    with:
-      pr_number: ${{ fromJSON(needs.check-trigger.outputs.pr-number) }}
-      fix_type: tests
-      branch_name: >
-        ${{ github.event.pull_request.head.ref ||
-            (github.event.workflow_run.pull_requests[0] &&
-             github.event.workflow_run.pull_requests[0].head.ref) ||
-            github.event.workflow_run.head_branch }}
-      debug_mode: false
-    secrets:
-      openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
-      gh_pat: ${{ secrets.GH_PAT }}
-
-  # Phase 3: Documentation (can run independently)
-  orchestrate-docs:
-    needs: [check-trigger, analyze-needs]
-    if: |
-      needs.check-trigger.outputs.should-orchestrate == 'true' &&
-      (needs.analyze-needs.outputs.needs-docs == 'true' || contains(github.event.label.name, 'docs'))
-    uses: ./.github/workflows/reusable-ai-fix.yml
-    with:
-      pr_number: ${{ fromJSON(needs.check-trigger.outputs.pr-number) }}
-      fix_type: docs
-      branch_name: >
-        ${{ github.event.pull_request.head.ref ||
-            (github.event.workflow_run.pull_requests[0] &&
-             github.event.workflow_run.pull_requests[0].head.ref) ||
-            github.event.workflow_run.head_branch }}
-      debug_mode: false
-    secrets:
-      openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
-      gh_pat: ${{ secrets.GH_PAT }}
-
-  # Final status report
-  orchestration-summary:
-    needs:
-      [
-        check-trigger,
-        analyze-needs,
-        orchestrate-lint,
-        orchestrate-security,
-        orchestrate-tests,
-        orchestrate-docs,
-      ]
-    if: always() && needs.check-trigger.outputs.should-orchestrate == 'true'
+  validate-commands:
+    name: Validate Dictionary Commands
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    needs: route-ai-task
+    if: needs.route-ai-task.outputs.should_run == 'true' && needs.route-ai-task.outputs.task_type == 'validate-commands'
+
     steps:
-      - name: Debug orchestration results
-        if: env.DEBUG_MODE == 'true'
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get PR changes
+        id: pr_changes
         run: |
-          echo "🐛 DEBUG: Orchestration results"
-          echo "Lint result: ${{ needs.orchestrate-lint.result }}"
-          echo "Security result: ${{ needs.orchestrate-security.result }}"
-          echo "Tests result: ${{ needs.orchestrate-tests.result }}"
-          echo "Docs result: ${{ needs.orchestrate-docs.result }}"
-          echo "Lint cost: ${{ needs.orchestrate-lint.outputs.cost_used }}"
-          echo "Security cost: ${{ needs.orchestrate-security.outputs.cost_used }}"
-          echo "Tests cost: ${{ needs.orchestrate-tests.outputs.cost_used }}"
-          echo "Docs cost: ${{ needs.orchestrate-docs.outputs.cost_used }}"
+          git fetch origin main
+          CHANGED_FILES=$(git diff origin/main...HEAD --name-only)
 
-      - name: Generate orchestration summary
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER="${{ needs.check-trigger.outputs.pr-number }}"
-          echo "🤖 **AI Orchestration Summary for PR #$PR_NUMBER**" > summary.md
-          echo "" >> summary.md
+          # Check if dictionary was modified
+          if echo "$CHANGED_FILES" | grep -q "information-dense-keywords.md"; then
+            echo "dictionary_changed=true" >> $GITHUB_OUTPUT
 
-          # Collect results from each phase
-          LINT_RESULT="${{ needs.orchestrate-lint.result }}"
-          SECURITY_RESULT="${{ needs.orchestrate-security.result }}"
-          TESTS_RESULT="${{ needs.orchestrate-tests.result }}"
-          DOCS_RESULT="${{ needs.orchestrate-docs.result }}"
-
-          # Calculate total cost
-          TOTAL_COST="0"
-          if [[ "$LINT_RESULT" == "success" ]]; then
-            TOTAL_COST=$(echo "$TOTAL_COST + ${{ needs.orchestrate-lint.outputs.cost_used || 0 }}" | bc -l)
-          fi
-          if [[ "$SECURITY_RESULT" == "success" ]]; then
-            TOTAL_COST=$(echo "$TOTAL_COST + ${{ needs.orchestrate-security.outputs.cost_used || 0 }}" | bc -l)
-          fi
-          if [[ "$TESTS_RESULT" == "success" ]]; then
-            TOTAL_COST=$(echo "$TOTAL_COST + ${{ needs.orchestrate-tests.outputs.cost_used || 0 }}" | bc -l)
-          fi
-          if [[ "$DOCS_RESULT" == "success" ]]; then
-            TOTAL_COST=$(echo "$TOTAL_COST + ${{ needs.orchestrate-docs.outputs.cost_used || 0 }}" | bc -l)
-          fi
-
-          echo "**Execution Results:**" >> summary.md
-          echo "" >> summary.md
-
-          # Format results with emojis
-          format_result() {
-            case "$1" in
-              "success") echo "✅ Success" ;;
-              "failure") echo "❌ Failed" ;;
-              "cancelled") echo "🚫 Cancelled" ;;
-              "skipped") echo "⏭️ Skipped" ;;
-              *) echo "❓ Unknown" ;;
-            esac
-          }
-
-          if [[ "${{ needs.analyze-needs.outputs.needs-lint }}" == "true" ]] || [[ "$LINT_RESULT" != "" ]]; then
-            echo "- **Lint Fixes:** $(format_result "$LINT_RESULT")" >> summary.md
-          fi
-
-          if [[ "${{ needs.analyze-needs.outputs.needs-security }}" == "true" ]] || [[ "$SECURITY_RESULT" != "" ]]; then
-            echo "- **Security Fixes:** $(format_result "$SECURITY_RESULT")" >> summary.md
-          fi
-
-          if [[ "${{ needs.analyze-needs.outputs.needs-tests }}" == "true" ]] || [[ "$TESTS_RESULT" != "" ]]; then
-            echo "- **Test Fixes:** $(format_result "$TESTS_RESULT")" >> summary.md
-          fi
-
-          if [[ "${{ needs.analyze-needs.outputs.needs-docs }}" == "true" ]] || [[ "$DOCS_RESULT" != "" ]]; then
-            echo "- **Documentation Fixes:** $(format_result "$DOCS_RESULT")" >> summary.md
-          fi
-
-          echo "" >> summary.md
-          echo "**Summary:**" >> summary.md
-          echo "- **Total Cost:** \$$TOTAL_COST" >> summary.md
-          echo "- **Circuit Breaker State:** ${{ needs.orchestrate-lint.outputs.circuit_state || 'Unknown' }}" >> summary.md
-          echo "- **Orchestration Trigger:** ${{ github.event.label.name || github.event.workflow_run.conclusion }}" >> summary.md
-
-          # Determine overall success
-          OVERALL_SUCCESS="true"
-          for result in "$LINT_RESULT" "$SECURITY_RESULT" "$TESTS_RESULT" "$DOCS_RESULT"; do
-            if [[ "$result" == "failure" ]]; then
-              OVERALL_SUCCESS="false"
-              break
-            fi
-          done
-
-          if [[ "$OVERALL_SUCCESS" == "true" ]]; then
-            echo "" >> summary.md
-            echo "🎉 **All requested AI fixes completed successfully!**" >> summary.md
+            # Get the diff content
+            DIFF_CONTENT=$(git diff origin/main...HEAD information-dense-keywords.md)
+            echo "diff_content<<EOF" >> $GITHUB_OUTPUT
+            echo "$DIFF_CONTENT" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
           else
-            echo "" >> summary.md
-            echo "⚠️ **Some AI fixes failed. Please review the workflow logs for details.**" >> summary.md
+            echo "dictionary_changed=false" >> $GITHUB_OUTPUT
           fi
 
-          # Add timestamp
-          echo "" >> summary.md
-          echo "_Orchestration completed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')_" >> summary.md
-
-      - name: Post orchestration summary
+      - name: Validate changes with AI
+        id: ai_validation
+        if: steps.pr_changes.outputs.dictionary_changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
         run: |
-          PR_NUMBER="${{ needs.check-trigger.outputs.pr-number }}"
-          gh pr comment $PR_NUMBER --body-file summary.md
+          # Create validation request using jq for safe JSON construction
+          jq -n \
+            --arg model "$AI_MODEL" \
+            --arg diff_content "${{ steps.pr_changes.outputs.diff_content }}" \
+            '{
+              model: $model,
+              messages: [
+                {
+                  role: "system",
+                  content: "You are a validator for the Information Dense Keywords Dictionary. Review changes to ensure: 1) Consistency with existing format and style, 2) Clear and actionable command definitions, 3) Realistic and helpful examples, 4) No ambiguity or conflicts with existing commands, 5) Proper grammar and formatting. Provide specific feedback on any issues found."
+                },
+                {
+                  role: "user",
+                  content: "Validate these changes to the dictionary:\n\n\($diff_content)\n\nProvide detailed validation feedback and approve or request changes."
+                }
+              ],
+              max_tokens: 1500,
+              temperature: 0.1
+            }' > ai_request.json
 
-      - name: Clean up orchestration labels
+          # Call OpenRouter API
+          RESPONSE=$(curl -s -X POST "https://openrouter.ai/api/v1/chat/completions" \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @ai_request.json)
+
+          # Extract validation
+          VALIDATION=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Validation failed"')
+
+          echo "validation<<EOF" >> $GITHUB_OUTPUT
+          echo "$VALIDATION" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post validation comment
+        if: steps.pr_changes.outputs.dictionary_changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER="${{ needs.check-trigger.outputs.pr-number }}"
+          COMMENT_BODY="## 🔍 AI Dictionary Validation
 
-          # Remove orchestration trigger labels
-          gh pr edit $PR_NUMBER --remove-label "ai-fix-all" || true
-          gh pr edit $PR_NUMBER --remove-label "ai-orchestrate" || true
+          ${{ steps.ai_validation.outputs.validation }}
 
-          # Add completion label
-          OVERALL_SUCCESS="true"
-          for result in \
-            "${{ needs.orchestrate-lint.result }}" \
-            "${{ needs.orchestrate-security.result }}" \
-            "${{ needs.orchestrate-tests.result }}" \
-            "${{ needs.orchestrate-docs.result }}"; do
-            if [[ "$result" == "failure" ]]; then
-              OVERALL_SUCCESS="false"
-              break
-            fi
-          done
+          ---
 
-          if [[ "$OVERALL_SUCCESS" == "true" ]]; then
-            gh pr edit $PR_NUMBER --add-label "ai-orchestration-complete" || true
-          else
-            gh pr edit $PR_NUMBER --add-label "ai-orchestration-partial" || true
+          *This validation was performed by AI to ensure dictionary quality and consistency.*
+
+          **Review Checklist:**
+          - [ ] Command definitions are clear and actionable
+          - [ ] Examples are realistic and helpful
+          - [ ] Format matches existing patterns
+          - [ ] No conflicts with existing commands
+          - [ ] Grammar and spelling are correct"
+
+          gh pr comment ${{ needs.route-ai-task.outputs.pr_number }} --body "$COMMENT_BODY"
+
+      - name: Add validation labels
+        if: steps.pr_changes.outputs.dictionary_changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ needs.route-ai-task.outputs.pr_number }} --add-label "ai-validated"
+
+          # Check validation result and add appropriate labels
+          if echo "${{ steps.ai_validation.outputs.validation }}" | grep -qi "approve\|good\|valid\|correct"; then
+            gh pr edit ${{ needs.route-ai-task.outputs.pr_number }} --add-label "ready-for-review"
+          elif echo "${{ steps.ai_validation.outputs.validation }}" | grep -qi "issue\|problem\|error\|change"; then
+            gh pr edit ${{ needs.route-ai-task.outputs.pr_number }} --add-label "needs-changes"
           fi

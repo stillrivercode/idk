@@ -59,7 +59,8 @@ jobs:
 
       - name: Install OpenRouter dependencies
         run: |
-          pip install openai==1.54.3 httpx==0.27.0
+          # Using shell script - no Python dependencies needed
+          echo "OpenRouter helper script uses curl and jq (available in Ubuntu)"
 
       - name: Install test dependencies
         run: |

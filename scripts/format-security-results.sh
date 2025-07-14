@@ -8,7 +8,7 @@ set -euo pipefail
 validate_number() {
     local value="$1"
     local default_value="${2:-0}"
-    
+
     # Check if value is a valid non-negative integer
     if [[ "$value" =~ ^[0-9]+$ ]]; then
         echo "$value"
