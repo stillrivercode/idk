@@ -15,14 +15,34 @@
 ```markdown
 # Created: [Asset Description]
 
+Complete details of the newly created asset including implementation, integration notes, and next steps.
+
 ## Files Created
 - **Path**: `/path/to/new/file.ext`
 - **Type**: [Component/Service/Test/Migration/etc.]
 
 ## Implementation
+
 ```javascript
 // Complete code implementation with comments
-```markdown
+export const LoginButton = ({ onLogin, disabled = false }) => {
+  const handleClick = () => {
+    if (!disabled && onLogin) {
+      onLogin();
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={disabled}
+      className="login-button"
+    >
+      Login
+    </button>
+  );
+};
+```
 
 ## Integration Notes
 
@@ -35,8 +55,7 @@
 - Suggested follow-up actions
 - Testing recommendations
 - Documentation updates needed
-
-```markdown
+```
 
 ## Usage Notes
 

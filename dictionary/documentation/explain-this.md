@@ -15,6 +15,8 @@
 ```markdown
 # Explanation: [Topic/Component Name]
 
+Comprehensive breakdown of concepts, code, or systems with clear explanations and examples.
+
 ## What It Is
 High-level description of the concept, component, or system.
 
@@ -38,7 +40,7 @@ High-level description of the concept, component, or system.
 ```javascript
 // Annotated code example showing the concept in action
 // with detailed comments explaining each part
-```markdown
+```
 
 ## Common Patterns & Variations
 
@@ -49,8 +51,7 @@ High-level description of the concept, component, or system.
 ## Summary
 
 Concise recap of the key points and takeaways.
-
-```markdown
+```
 
 ## Explanation Types
 

@@ -15,6 +15,8 @@
 ```markdown
 # Debug Report: [Issue Description]
 
+Systematic analysis of the issue with root cause identification and solution implementation.
+
 ## Problem Summary
 Brief description of the issue and its symptoms.
 

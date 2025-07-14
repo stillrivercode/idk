@@ -15,6 +15,8 @@
 ```markdown
 # Code Review: [Component/File Name]
 
+Brief overview of findings and recommendations from the comprehensive code review.
+
 ## Summary
 Brief overview of the review scope and overall assessment
 
@@ -36,6 +38,7 @@ Brief overview of the review scope and overall assessment
 3. Architectural considerations
 
 ## Code Examples
+
 ```javascript
 // Example of reviewed code with annotations
 function authenticateUser(credentials) {
@@ -46,7 +49,7 @@ function authenticateUser(credentials) {
   // ⚠️ Issue: Plain text credential comparison
   return credentials.secret === 'hardcoded'; // SECURITY RISK  # pragma: allowlist secret
 }
-```markdown
+```
 
 ## Security Review
 
@@ -74,8 +77,7 @@ function authenticateUser(credentials) {
 - Coding standards adherence
 - Team conventions compliance
 - Industry best practices
-
-```markdown
+```
 
 ## Review Categories
 

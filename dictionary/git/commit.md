@@ -15,8 +15,11 @@
 ```markdown
 # Git Commit Created
 
+Complete summary of the git commit operation including message, files, and verification status.
+
 ## Commit Message
-```markdown
+
+```text
 
 feat(auth): add new login button component
 
@@ -26,7 +29,7 @@ feat(auth): add new login button component
 
 Fixes #123
 
-```markdown
+```
 
 ## Files Included
 - `src/components/LoginButton.jsx` - New login button component
@@ -44,19 +47,19 @@ Fixes #123
 ✅ Linting successful
 ✅ Build completed
 ✅ No conflicts detected
-```markdown
+```
 
 ## Commit Message Format
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/) specification:
 
-```markdown
+```text
 <type>[optional scope]: <description>
 
 [optional body]
 
 [optional footer(s)]
-```markdown
+```
 
 ### Types
 

@@ -201,31 +201,76 @@ class CommandStructureTest {
       const fileName = path.basename(file);
 
       this.test(`${fileName} has output format specification`, () => {
-        const outputSection = content.match(/## Expected Output Format\n\n([\s\S]*?)(?=\n##|$)/);
-        if (!outputSection) {
+        // Find the Expected Output Format section - stop at next top-level section that's not inside a code block
+        const lines = content.split('\n');
+        let startIdx = -1;
+        let endIdx = lines.length;
+
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i] === '## Expected Output Format') {
+            startIdx = i;
+            break;
+          }
+        }
+
+        if (startIdx === -1) {
           throw new Error('Expected Output Format section not found');
         }
 
-        const formatContent = outputSection[1];
-        if (formatContent.trim().length < 50) {
+        // Find the end of the section - look for next ## section that's not inside a code block
+        let inCodeBlock = false;
+        for (let i = startIdx + 1; i < lines.length; i++) {
+          if (lines[i].startsWith('```')) {
+            inCodeBlock = !inCodeBlock;
+          } else if (!inCodeBlock && lines[i].match(/^## [^#]/)) {
+            endIdx = i;
+            break;
+          }
+        }
+
+        const sectionLines = lines.slice(startIdx + 1, endIdx);
+        const formatContent = sectionLines.join('\n').trim();
+
+        if (formatContent.length < 50) {
           throw new Error('Output format specification too brief');
         }
       });
 
       this.test(`${fileName} output format includes code blocks`, () => {
-        const outputSection = content.match(/## Expected Output Format\n\n([\s\S]*?)(?=\n## [^#]|$)/);
-        if (outputSection) {
-          const formatContent = outputSection[1];
-          // More flexible code block detection
-          const codeBlocks = formatContent.match(/```[^`]*```/g);
+        // Find the Expected Output Format section - stop at next top-level section that's not inside a code block
+        const lines = content.split('\n');
+        let startIdx = -1;
+        let endIdx = lines.length;
 
-          if (!codeBlocks || codeBlocks.length === 0) {
-            // Check if there are at least triple backticks indicating code blocks
-            const backtickCount = (formatContent.match(/```/g) || []).length;
-            if (backtickCount < 2) {
-              throw new Error('Output format should include code block examples');
-            }
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i] === '## Expected Output Format') {
+            startIdx = i;
+            break;
           }
+        }
+
+        if (startIdx === -1) {
+          return; // No Expected Output Format section
+        }
+
+        // Find the end of the section - look for next ## section that's not inside a code block
+        let inCodeBlock = false;
+        for (let i = startIdx + 1; i < lines.length; i++) {
+          if (lines[i].startsWith('```')) {
+            inCodeBlock = !inCodeBlock;
+          } else if (!inCodeBlock && lines[i].match(/^## [^#]/)) {
+            endIdx = i;
+            break;
+          }
+        }
+
+        const sectionLines = lines.slice(startIdx + 1, endIdx);
+        const formatContent = sectionLines.join('\n');
+
+        // Count triple backticks - should have at least 2 (opening and closing)
+        const backtickCount = (formatContent.match(/```/g) || []).length;
+        if (backtickCount < 2) {
+          throw new Error('Output format should include code block examples');
         }
       });
     });
