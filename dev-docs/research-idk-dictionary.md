@@ -9,21 +9,19 @@
 The Information Dense Keywords (IDK) Dictionary is a simple, extensible system for efficient AI communication.
 Like shorthand for developers, IDKs compress common AI prompts into reusable keywords that save time and money.
 
-**Core Concept**: Transform `"Create a user registration form with email validation"` (12 tokens) → `idk SELECT UserForm with email-validation` (5 tokens)
+**Core Concept**: A single, well-structured Markdown file containing a dictionary of commands for an AI assistant.
 
-**Why This Matters**: AI costs are token-based. Teams spend $200-2000/month on AI.
-Simple compression = immediate savings.
+**Why This Matters**: This approach is simple, easy to maintain, and provides a clear, shared vocabulary for human-AI collaboration.
 
 ## 💡 MVP Approach
 
 ### Start Simple, Scale Smart
 
-**Phase 0: Proof of Concept** ($0 - $10K, 4 weeks)
+**Phase 0: Proof of Concept**
 
-- 20 core IDKs in a GitHub repo
-- Simple YAML definitions
-- Basic CLI tool for expansion
-- Community GitHub Discussions
+- A single Markdown file with 8 core commands.
+- Clear definitions and examples for each command.
+- Community feedback via GitHub Issues.
 
 **Phase 1: Foundation** ($10K - $50K, 3 months)
 
