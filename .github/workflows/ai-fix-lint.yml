@@ -1,0 +1,279 @@
+name: AI Fix Lint Issues
+
+# Centralized timeout configuration
+env:
+  WORKFLOW_TIMEOUT_MINUTES: 30
+  CLI_INSTALL_TIMEOUT_MINUTES: 5
+  AI_EXECUTION_TIMEOUT_MINUTES: ${{ vars.AI_EXECUTION_TIMEOUT_MINUTES || '10' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: 'Pull Request number to fix'
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  ai-fix-lint:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    concurrency:
+      group: ai-workflows-pr-${{ inputs.pull_request_number }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Get PR details
+        id: pr_details
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          PR_INFO=$(gh pr view "$PR_NUMBER" --json headRefName,number)
+          echo "head_ref=$(echo $PR_INFO | jq -r '.headRefName')" >> $GITHUB_OUTPUT
+          echo "pr_number=$(echo $PR_INFO | jq -r '.number')" >> $GITHUB_OUTPUT
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ steps.pr_details.outputs.head_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python (for OpenRouter script)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install OpenRouter dependencies
+        run: |
+          pip install openai==1.54.3 httpx==0.27.0
+
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      - name: Install additional linting tools
+        run: |
+          # All linting tools are now in package.json devDependencies
+          echo "Using npm packages from package.json for linting"
+
+      - name: Run lint checks and capture errors
+        id: lint_check
+        run: |
+          mkdir -p .temp
+          echo "## Lint Issues Found" > .temp/lint_issues.md
+          echo "" >> .temp/lint_issues.md
+
+          # JavaScript/TypeScript linting with ESLint
+          echo "### ESLint Issues:" >> .temp/lint_issues.md
+          if ! npm run lint > .temp/eslint_issues.txt 2>&1; then
+            echo '```' >> .temp/lint_issues.md
+            cat .temp/eslint_issues.txt >> .temp/lint_issues.md
+            echo '```' >> .temp/lint_issues.md
+          fi
+
+          # YAML linting
+          echo "### YAML Issues:" >> .temp/lint_issues.md
+          if ! npm run lint:yaml > .temp/yaml_issues.txt 2>&1; then
+            echo '```' >> .temp/lint_issues.md
+            cat .temp/yaml_issues.txt >> .temp/lint_issues.md
+            echo '```' >> .temp/lint_issues.md
+          fi
+
+          # Markdown linting
+          echo "### Markdown Issues:" >> .temp/lint_issues.md
+          if ! npm run lint:markdown > .temp/markdown_issues.txt 2>&1; then
+            echo '```' >> .temp/lint_issues.md
+            cat .temp/markdown_issues.txt >> .temp/lint_issues.md
+            echo '```' >> .temp/lint_issues.md
+          fi
+
+      - name: Apply automatic lint fixes
+        run: |
+          echo "## Applying automatic lint fixes..."
+
+          # Apply ESLint auto-fixes
+          npm run lint:fix || echo "ESLint auto-fixes completed"
+
+          # Apply Prettier formatting
+          npm run format || echo "Prettier formatting completed"
+
+      - name: AI Fix Remaining Lint Issues
+        timeout-minutes: ${{ fromJSON(env.AI_EXECUTION_TIMEOUT_MINUTES) }}
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+        run: |
+          # Check if there are still lint issues after auto-fixes
+          echo "## Checking for remaining lint issues..." > .temp/remaining_issues.md
+          echo "" >> .temp/remaining_issues.md
+
+          # Re-run lint checks to see what's left
+          if ! npm run lint > .temp/remaining_eslint.txt 2>&1; then
+            echo "### Remaining ESLint Issues:" >> .temp/remaining_issues.md
+            echo '```' >> .temp/remaining_issues.md
+            cat .temp/remaining_eslint.txt >> .temp/remaining_issues.md
+            echo '```' >> .temp/remaining_issues.md
+          fi
+
+          if ! npm run lint:yaml > .temp/remaining_yaml.txt 2>&1; then
+            echo "### Remaining YAML Issues:" >> .temp/remaining_issues.md
+            echo '```' >> .temp/remaining_issues.md
+            cat .temp/remaining_yaml.txt >> .temp/remaining_issues.md
+            echo '```' >> .temp/remaining_issues.md
+          fi
+
+          if ! npm run lint:markdown > .temp/remaining_markdown.txt 2>&1; then
+            echo "### Remaining Markdown Issues:" >> .temp/remaining_issues.md
+            echo '```' >> .temp/remaining_issues.md
+            cat .temp/remaining_markdown.txt >> .temp/remaining_issues.md
+            echo '```' >> .temp/remaining_issues.md
+          fi
+
+          # Only use Claude if there are remaining issues
+          if [ -s .temp/remaining_eslint.txt ] || [ -s .temp/remaining_yaml.txt ] || \
+             [ -s .temp/remaining_markdown.txt ]; then
+            echo "Remaining issues found, using Claude for complex fixes..."
+
+            cat > .temp/fix_lint_prompt.md << 'EOF'
+          I need help fixing the remaining linting issues in this codebase after
+          automatic fixes have been applied. Here are the remaining linting errors:
+
+          EOF
+            cat .temp/remaining_issues.md >> .temp/fix_lint_prompt.md
+            cat >> .temp/fix_lint_prompt.md << 'EOF'
+
+          Please fix all the remaining linting issues found above. The fixes should:
+          1. Maintain code functionality
+          2. Follow project conventions
+          3. Fix all remaining ESLint, YAML, and Markdown issues
+          4. Not break any existing functionality
+
+          Please analyze the linting issues and make the necessary file changes to fix these issues while preserving functionality. Use the Edit tool to modify files directly.
+          EOF
+
+            # Use AI via OpenRouter to fix the remaining issues
+            echo "🤖 Using $AI_MODEL via OpenRouter to fix remaining lint issues..."
+            python ./scripts/openrouter-ai-helper.py \
+              --prompt-file .temp/fix_lint_prompt.md \
+              --output-file .temp/ai_response.md \
+              --model "$AI_MODEL" \
+              --title "AI Lint Fix"
+
+            echo "AI Response:"
+            cat .temp/ai_response.md
+          else
+            echo "No remaining issues found after automatic fixes!"
+          fi
+
+      - name: Verify fixes by running lint checks again
+        run: |
+          echo "## Verifying lint fixes..."
+
+          # Run all lint checks again
+          npm run lint || echo "ESLint still has issues"
+          npm run lint:yaml || echo "YAML still has issues"
+          npm run lint:markdown || echo "Markdown still has issues"
+
+      - name: Commit and push fixes
+        env:
+          HEAD_REF: ${{ steps.pr_details.outputs.head_ref }}
+          PR_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "CHANGES_MADE=false" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "CHANGES_MADE=true" >> $GITHUB_ENV
+          git commit -m "$(cat <<EOF
+          🤖 AI Fix: Resolve linting issues
+
+          Automatically generated fixes for linting issues in PR #${PR_NUMBER}
+
+          Changes made:
+          - Fixed ESLint linting issues
+          - Applied Prettier code formatting
+          - Fixed YAML formatting issues
+          - Resolved Markdown linting issues
+
+          🤖 Generated with OpenRouter AI
+
+          Co-Authored-By: AI Assistant <noreply@openrouter.ai>
+          EOF
+          )"
+
+          # Pull latest changes before pushing to avoid conflicts
+          git pull --rebase origin "$HEAD_REF" || true
+          git push origin "$HEAD_REF"
+
+      - name: Remove triggering label
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          echo "Removing ai-fix-lint label from PR #$PR_NUMBER"
+          gh pr edit "$PR_NUMBER" --remove-label "ai-fix-lint"
+          echo "✅ Successfully removed ai-fix-lint label"
+
+      - name: Comment on PR
+        if: env.CHANGES_MADE == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **AI Lint Fixes Applied**
+
+              I've automatically fixed the linting issues directly in this PR!
+
+              The AI has analyzed and fixed:
+              - ✅ ESLint linting issues
+              - ✅ Prettier code formatting
+              - ✅ YAML formatting
+              - ✅ Markdown linting
+
+              The \`ai-fix-lint\` label has been removed. The fixes have been committed directly to this branch.
+
+              Please review the changes and re-run any tests if needed! 🚀`
+            });
+
+      - name: Comment on PR if no changes needed
+        if: env.CHANGES_MADE == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **AI Lint Check Complete**
+
+              Good news! No linting issues were found that need fixing.
+
+              The \`ai-fix-lint\` label has been removed.
+
+              All linting checks are passing! ✅`
+            });
