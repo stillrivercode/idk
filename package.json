@@ -22,9 +22,7 @@
   "bugs": {
     "url": "https://github.com/stillrivercode/idk/issues"
   },
-  "bin": {
-    "idk-install": "./bin/idk-install"
-  },
+  "bin": "./bin/idk-install",
   "files": [
     "information-dense-keywords.md",
     "README.md",
