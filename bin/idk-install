@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+
+const { execSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+// Get the directory where this script is located
+const scriptDir = __dirname;
+const projectRoot = path.dirname(scriptDir);
+const installScript = path.join(projectRoot, 'install.sh');
+
+// Get installation directory from command line args or use default
+const installDir = process.argv[2] || './docs';
+
+console.log('Information Dense Keywords Dictionary Installer (npx)');
+console.log('===================================================\n');
+
+// Check if install.sh exists
+if (!fs.existsSync(installScript)) {
+    console.error('Error: install.sh not found. Please ensure you are running from the correct directory.');
+    process.exit(1);
+}
+
+try {
+    // Execute the install script
+    execSync(`bash "${installScript}" "${installDir}"`, {
+        stdio: 'inherit',
+        cwd: projectRoot
+    });
+} catch (error) {
+    console.error('Installation failed:', error.message);
+    process.exit(1);
+}

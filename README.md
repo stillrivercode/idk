@@ -19,24 +19,22 @@ A curated collection of action-oriented keywords organized in a modular structur
 
 ### For Individual Users
 
-#### Option 1: Direct Reference (Recommended)
-
-1. **Bookmark the main index**: [Information Dense Keywords Dictionary](information-dense-keywords.md)
-2. **Copy commands directly** from the definitions when prompting your AI assistant
-3. **Chain commands** for complex workflows: `analyze this auth system then spec this improvement then plan this implementation`
-
-#### Option 2: Clone the Repository
+#### Option 1: NPX Install (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/stillriver/idk.git
-cd idk
+# Install dictionary to docs/ directory
+npx @stillrivercode/information-dense-keywords
 
-# Browse the dictionary
-open information-dense-keywords.md  # macOS
-xdg-open information-dense-keywords.md  # Linux
-start information-dense-keywords.md  # Windows
-```bash
+# Or install to custom directory
+npx @stillrivercode/information-dense-keywords /path/to/custom/docs
+```
+
+#### Option 2: Online Reference
+
+1. **View the dictionary on GitHub**: Visit [github.com/stillriver/idk](https://github.com/stillriver/idk)
+2. **Browse command definitions**: Navigate through the dictionary structure to find commands
+3. **Copy command syntax**: Use the exact command text when prompting your AI assistant
+4. **Example usage**: Tell your AI: `analyze this authentication system for security vulnerabilities`
 
 ### For Teams & Organizations
 
