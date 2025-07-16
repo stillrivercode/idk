@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/stillrivercode/idk/compare/v1.2.0...v1.2.1) (2025-07-16)
+
+
+### Bug Fixes
+
+* update bin entry to enable default npx command ([#13](https://github.com/stillrivercode/idk/issues/13)) ([61f8636](https://github.com/stillrivercode/idk/commit/61f8636d8b7aa9177af508b60d21c849f53add09))
+
 # [1.2.0](https://github.com/stillrivercode/idk/compare/v1.1.1...v1.2.0) (2025-07-15)
 
 
