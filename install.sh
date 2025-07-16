@@ -17,6 +17,13 @@ DEFAULT_INSTALL_DIR="./docs"
 # Parse command line arguments
 INSTALL_DIR="${1:-$DEFAULT_INSTALL_DIR}"
 
+# Prevent installation in sensitive system directories
+if [[ "$INSTALL_DIR" == "/" || "$INSTALL_DIR" == "/etc" || "$INSTALL_DIR" == "/usr"* || "$INSTALL_DIR" == "/var"* || "$INSTALL_DIR" == "/bin"* || "$INSTALL_DIR" == "/sbin"* ]]; then
+    echo -e "${RED}Error: Installation in system directory '$INSTALL_DIR' is not allowed${NC}"
+    echo "Please choose a different directory for installation."
+    exit 1
+fi
+
 echo -e "${GREEN}Information Dense Keywords Dictionary Installer${NC}"
 echo "================================================"
 echo ""
@@ -32,6 +39,11 @@ if [ ! -d "dictionary" ]; then
     exit 1
 fi
 
+if [ ! -f "AI.md" ]; then
+    echo -e "${RED}Error: AI.md not found in current directory${NC}"
+    exit 1
+fi
+
 # Create docs directory if it doesn't exist
 echo -e "${YELLOW}Installing to: ${INSTALL_DIR}${NC}"
 mkdir -p "$INSTALL_DIR"
@@ -43,14 +55,22 @@ cp "information-dense-keywords.md" "$INSTALL_DIR/"
 echo "Copying dictionary directory..."
 cp -r "dictionary" "$INSTALL_DIR/"
 
+# Copy AI.md to project root (parent of install directory)
+echo "Copying AI.md to project root..."
+# Use realpath to resolve the absolute path of the parent directory ('project root').
+# This robustly handles cases like relative paths (e.g., './docs') or nested paths.
+PROJECT_ROOT=$(realpath "$INSTALL_DIR/..")
+cp "AI.md" "$PROJECT_ROOT/"
+
 # Verify installation
-if [ -f "$INSTALL_DIR/information-dense-keywords.md" ] && [ -d "$INSTALL_DIR/dictionary" ]; then
+if [ -f "$INSTALL_DIR/information-dense-keywords.md" ] && [ -d "$INSTALL_DIR/dictionary" ] && [ -f "$PROJECT_ROOT/AI.md" ]; then
     echo ""
     echo -e "${GREEN}✓ Installation completed successfully!${NC}"
     echo ""
     echo "Installed files:"
     echo "  - $INSTALL_DIR/information-dense-keywords.md"
     echo "  - $INSTALL_DIR/dictionary/"
+    echo "  - $PROJECT_ROOT/AI.md"
     echo ""
     echo "Dictionary structure:"
     find "$INSTALL_DIR/dictionary" -name "*.md" | sort | sed 's/^/  /'

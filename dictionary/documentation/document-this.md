@@ -2,7 +2,7 @@
 
 **Category**: Documentation Commands
 
-**Definition**: When a user issues a `document this` command, they are asking you to create comprehensive documentation including purpose, usage, examples, and API references where applicable.
+**Definition**: When a user issues a `document this` command, they are asking you to create comprehensive documentation including purpose, usage, examples, and API references where applicable. The documentation should be saved as a markdown file in the `docs/` directory with a descriptive filename.
 
 ## Example Prompts
 
@@ -83,6 +83,10 @@ Brief description of purpose and functionality.
 - Use consistent formatting and terminology
 - Add diagrams or screenshots when helpful
 - Keep documentation close to the code it describes
+- Save documentation as `.md` files in `docs/` directory
+- Use descriptive filenames (e.g., `api-authentication-guide.md`)
+- Organize into subdirectories for complex projects (e.g., `docs/api/`, `docs/components/`)
+- Create the `docs/` directory if it doesn't exist
 
 ## Related Commands
 

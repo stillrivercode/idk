@@ -4,7 +4,8 @@
 
 **Definition**: When a user issues a `research this` command, they are asking you to investigate and gather comprehensive
 information about a topic, technology, pattern, or concept. This includes collecting information from multiple sources,
-analyzing current best practices, and providing a thorough research summary.
+analyzing current best practices, and providing a thorough research summary. The research should be saved as a markdown
+file in the `docs/research/` directory with a descriptive filename.
 
 ## Example Prompts
 
@@ -105,6 +106,9 @@ Summary of key takeaways and next steps for implementation.
 - Include practical implementation considerations
 - Provide balanced analysis of pros and cons
 - Consider the specific context and requirements
+- Save research as `.md` files in `docs/research/` directory
+- Use descriptive filenames (e.g., `oauth2-microservices-patterns.md`)
+- Create the `docs/research/` directory if it doesn't exist
 
 ## Related Commands
 
