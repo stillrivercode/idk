@@ -197,7 +197,7 @@ else
 fi
 
 echo ""
-echo "Test 9: AI.md copying when missing from project root"
+echo "Test 9: AI.md copying when missing from installation directory"
 echo "----------------------------------------------------"
 # Test in a clean subdirectory where AI.md doesn't exist in project root
 mkdir -p test-clean-project
@@ -208,11 +208,11 @@ cp ../information-dense-keywords.md .
 cp -r ../dictionary .
 cp ../AI.md .
 cp ../install.sh .
-# Note: AI.md exists in current directory (package) but not in project root
-# Since we're in test-clean-project, there's no AI.md in the project root initially
+# Note: AI.md exists in current directory (package) but not in installation directory
+# Since we're in test-clean-project, there's no AI.md in the installation directory initially
 ./install.sh test-docs
-if [ -f "test-docs/information-dense-keywords.md" ] && [ -d "test-docs/dictionary" ] && [ -f "AI.md" ]; then
-    echo -e "${GREEN}✓ Test 9 passed: AI.md copied to project root successfully${NC}"
+if [ -f "test-docs/information-dense-keywords.md" ] && [ -d "test-docs/dictionary" ] && [ -f "test-docs/AI.md" ]; then
+    echo -e "${GREEN}✓ Test 9 passed: AI.md copied to installation directory successfully${NC}"
 else
     echo -e "${RED}✗ Test 9 failed: AI.md copying failed${NC}"
     if [ ! -f "test-docs/information-dense-keywords.md" ]; then
@@ -221,8 +221,8 @@ else
     if [ ! -d "test-docs/dictionary" ]; then
         echo -e "${RED}  Missing: test-docs/dictionary${NC}"
     fi
-    if [ ! -f "AI.md" ]; then
-        echo -e "${RED}  Missing: AI.md in project root${NC}"
+    if [ ! -f "test-docs/AI.md" ]; then
+        echo -e "${RED}  Missing: test-docs/AI.md in installation directory${NC}"
     fi
     cd ..
     exit 1

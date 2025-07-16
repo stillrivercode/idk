@@ -63,25 +63,25 @@ if [ -d "$INSTALL_DIR/dictionary" ]; then
 fi
 cp -r "dictionary" "$INSTALL_DIR/"
 
-# Copy AI.md to user's working directory (where user ran the command)
-echo "Copying AI.md to current directory..."
-# Only copy if AI.md doesn't already exist in user's directory
-if [ ! -f "$USER_DIR/AI.md" ]; then
-    echo "AI.md not found in current directory. Copying default version..."
-    cp "AI.md" "$USER_DIR/AI.md"
+# Copy AI.md to installation directory (same location as other dictionary files)
+echo "Copying AI.md to installation directory..."
+# Only copy if AI.md doesn't already exist in installation directory
+if [ ! -f "$INSTALL_DIR/AI.md" ]; then
+    echo "AI.md not found in installation directory. Copying default version..."
+    cp "AI.md" "$INSTALL_DIR/AI.md"
 else
-    echo "User's AI.md already exists in current directory, skipping copy."
+    echo "User's AI.md already exists in installation directory, skipping copy."
 fi
 
 # Verify installation
-if [ -f "$INSTALL_DIR/information-dense-keywords.md" ] && [ -d "$INSTALL_DIR/dictionary" ] && [ -f "$USER_DIR/AI.md" ]; then
+if [ -f "$INSTALL_DIR/information-dense-keywords.md" ] && [ -d "$INSTALL_DIR/dictionary" ] && [ -f "$INSTALL_DIR/AI.md" ]; then
     echo ""
     echo -e "${GREEN}✓ Installation completed successfully!${NC}"
     echo ""
     echo "Installed files:"
     echo "  - $INSTALL_DIR/information-dense-keywords.md"
     echo "  - $INSTALL_DIR/dictionary/"
-    echo "  - $USER_DIR/AI.md"
+    echo "  - $INSTALL_DIR/AI.md"
     echo ""
     echo "Dictionary structure:"
     find "$INSTALL_DIR/dictionary" -name "*.md" | sort | sed 's/^/  /'
