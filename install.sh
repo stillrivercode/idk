@@ -44,33 +44,41 @@ if [ ! -f "AI.md" ]; then
     exit 1
 fi
 
+
 # Create docs directory if it doesn't exist
 echo -e "${YELLOW}Installing to: ${INSTALL_DIR}${NC}"
 mkdir -p "$INSTALL_DIR"
 
-# Copy files
+# Copy files (preserving existing content)
 echo "Copying information-dense-keywords.md..."
 cp "information-dense-keywords.md" "$INSTALL_DIR/"
 
 echo "Copying dictionary directory..."
+# Use cp -r to copy dictionary, which will merge with existing content
+if [ -d "$INSTALL_DIR/dictionary" ]; then
+    echo "  Merging with existing dictionary directory..."
+fi
 cp -r "dictionary" "$INSTALL_DIR/"
 
-# Copy AI.md to project root (parent of install directory)
-echo "Copying AI.md to project root..."
-# Use realpath to resolve the absolute path of the parent directory ('project root').
-# This robustly handles cases like relative paths (e.g., './docs') or nested paths.
-PROJECT_ROOT=$(realpath "$INSTALL_DIR/..")
-cp "AI.md" "$PROJECT_ROOT/"
+# Copy AI.md to current directory (where script is running)
+echo "Copying AI.md to current directory..."
+# Only copy if AI.md doesn't already exist in current directory
+if [ ! -f "./AI.md" ]; then
+    echo "AI.md not found in current directory. Copying default version..."
+    cp "AI.md" "./AI.md"
+else
+    echo "User's AI.md already exists in current directory, skipping copy."
+fi
 
 # Verify installation
-if [ -f "$INSTALL_DIR/information-dense-keywords.md" ] && [ -d "$INSTALL_DIR/dictionary" ] && [ -f "$PROJECT_ROOT/AI.md" ]; then
+if [ -f "$INSTALL_DIR/information-dense-keywords.md" ] && [ -d "$INSTALL_DIR/dictionary" ] && [ -f "./AI.md" ]; then
     echo ""
     echo -e "${GREEN}✓ Installation completed successfully!${NC}"
     echo ""
     echo "Installed files:"
     echo "  - $INSTALL_DIR/information-dense-keywords.md"
     echo "  - $INSTALL_DIR/dictionary/"
-    echo "  - $PROJECT_ROOT/AI.md"
+    echo "  - $(pwd)/AI.md"
     echo ""
     echo "Dictionary structure:"
     find "$INSTALL_DIR/dictionary" -name "*.md" | sort | sed 's/^/  /'

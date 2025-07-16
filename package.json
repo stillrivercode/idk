@@ -26,13 +26,11 @@
   "files": [
     "information-dense-keywords.md",
     "README.md",
-    "CLAUDE.md",
-    "GEMINI.md",
+    "AI.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "ROADMAP.md",
     "examples/",
-    "adrs/",
     "dictionary/",
     "install.sh",
     "bin/"
