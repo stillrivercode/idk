@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/stillrivercode/idk/compare/v1.2.2...v1.3.0) (2025-07-16)
+
+
+### Features
+
+* add roadmap command definition ([#15](https://github.com/stillrivercode/idk/issues/15)) ([30ff22e](https://github.com/stillrivercode/idk/commit/30ff22ebc1b63493e565b430bc3071e02b5dbb4d))
+
 ## [1.2.2](https://github.com/stillrivercode/idk/compare/v1.2.1...v1.2.2) (2025-07-16)
 
 
