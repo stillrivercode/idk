@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/stillrivercode/idk/compare/v1.3.0...v1.4.0) (2025-07-16)
+
+
+### Features
+
+* enhance documentation commands and installer ([#16](https://github.com/stillrivercode/idk/issues/16)) ([d11297a](https://github.com/stillrivercode/idk/commit/d11297ada4ab09782a93041695acfbb95ee56c93))
+
 # [1.3.0](https://github.com/stillrivercode/idk/compare/v1.2.2...v1.3.0) (2025-07-16)
 
 
