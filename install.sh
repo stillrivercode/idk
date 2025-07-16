@@ -17,6 +17,13 @@ DEFAULT_INSTALL_DIR="./docs"
 # Parse command line arguments
 INSTALL_DIR="${1:-$DEFAULT_INSTALL_DIR}"
 
+# Prevent installation in sensitive system directories
+if [[ "$INSTALL_DIR" == "/" || "$INSTALL_DIR" == "/etc" || "$INSTALL_DIR" == "/usr"* || "$INSTALL_DIR" == "/var"* || "$INSTALL_DIR" == "/bin"* || "$INSTALL_DIR" == "/sbin"* ]]; then
+    echo -e "${RED}Error: Installation in system directory '$INSTALL_DIR' is not allowed${NC}"
+    echo "Please choose a different directory for installation."
+    exit 1
+fi
+
 echo -e "${GREEN}Information Dense Keywords Dictionary Installer${NC}"
 echo "================================================"
 echo ""

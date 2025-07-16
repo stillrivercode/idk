@@ -23,7 +23,7 @@ CUSTOM_DIR="test-custom-docs"
 cleanup() {
     echo -e "${YELLOW}Cleaning up test directories...${NC}"
     rm -rf "$TEST_DIR" "$CUSTOM_DIR"
-    # Note: We keep AI.md in the project root as it's part of the installation
+    # The final installation in ./docs is not removed by cleanup
 }
 
 # Set trap to cleanup on exit
@@ -157,6 +157,16 @@ else
 fi
 
 echo ""
+echo "Test 7: System directory protection"
+echo "-----------------------------------"
+if ./install.sh / 2>&1 | grep -q "Installation in system directory '/' is not allowed"; then
+    echo -e "${GREEN}✓ Test 7 passed: System directory protection works${NC}"
+else
+    echo -e "${RED}✗ Test 7 failed: System directory protection failed${NC}"
+    exit 1
+fi
+
+echo ""
 echo -e "${GREEN}All tests passed!${NC}"
 echo ""
 echo "Summary:"
@@ -166,6 +176,7 @@ echo "- File structure: ✓"
 echo "- Overwrite: ✓"
 echo "- Spaces in path: ✓"
 echo "- AI.md content: ✓"
+echo "- System directory protection: ✓"
 
 # Cleanup test directories (docs stays for user)
 rm -rf "$TEST_DIR" "$CUSTOM_DIR"
