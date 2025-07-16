@@ -67,6 +67,7 @@ Commands for project planning and specification.
 
 - [**plan this**](dictionary/workflow/plan-this.md) - Break down complex tasks into implementation plans
 - [**spec this**](dictionary/workflow/spec-this.md) - Create detailed technical specifications
+- [**roadmap**](dictionary/workflow/roadmap.md) - Create strategic development roadmaps with phases and milestones
 
 ---
 
@@ -88,6 +89,7 @@ Commands for project planning and specification.
 | review this | Code review | Quality Assurance |
 | plan this | Implementation planning | Workflow |
 | spec this | Technical specifications | Workflow |
+| roadmap | Strategic development roadmaps | Workflow |
 | gh | GitHub operations | Git |
 | commit | Git commits | Git |
 | push | Push to remote | Git |
