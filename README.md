@@ -19,7 +19,7 @@ A curated collection of action-oriented keywords organized in a modular structur
 
 ### 🤖 AI Assistant Configuration
 
-When you run the installer, a file named `AI.md` is copied to your project's root directory. This file contains shared instructions and context for any AI assistant you use, ensuring it understands the project's conventions and the "Information Dense Keywords" command set.
+When you run the installer, a file named `AI.md` is copied to your installation directory (e.g., `docs/AI.md`). This file contains shared instructions and context for any AI assistant you use, ensuring it understands the project's conventions and the "Information Dense Keywords" command set.
 
 You are encouraged to customize this file with project-specific details.
 
