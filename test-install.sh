@@ -195,6 +195,29 @@ else
 fi
 
 echo ""
+echo "Test 9: AI.md creation when missing"
+echo "-----------------------------------"
+# Remove AI.md to test creation functionality
+rm -f AI.md
+rm -rf docs  # Clean any existing docs
+./install.sh
+if [ -f "docs/information-dense-keywords.md" ] && [ -d "docs/dictionary" ] && [ -f "AI.md" ]; then
+    echo -e "${GREEN}✓ Test 9 passed: AI.md creation when missing successful${NC}"
+else
+    echo -e "${RED}✗ Test 9 failed: AI.md creation when missing failed${NC}"
+    if [ ! -f "docs/information-dense-keywords.md" ]; then
+        echo -e "${RED}  Missing: docs/information-dense-keywords.md${NC}"
+    fi
+    if [ ! -d "docs/dictionary" ]; then
+        echo -e "${RED}  Missing: docs/dictionary${NC}"
+    fi
+    if [ ! -f "AI.md" ]; then
+        echo -e "${RED}  Missing: AI.md in project root${NC}"
+    fi
+    exit 1
+fi
+
+echo ""
 echo -e "${GREEN}All tests passed!${NC}"
 echo ""
 echo "Summary:"
@@ -206,6 +229,7 @@ echo "- Spaces in path: ✓"
 echo "- AI.md content: ✓"
 echo "- System directory protection: ✓"
 echo "- Top-level directory installation: ✓"
+echo "- AI.md creation when missing: ✓"
 
 # Cleanup test directories (docs stays for user)
 rm -rf "$TEST_DIR" "$CUSTOM_DIR"
