@@ -10,7 +10,10 @@ const projectRoot = path.dirname(scriptDir);
 const installScript = path.join(projectRoot, 'install.sh');
 
 // Get installation directory from command line args or use default
+// Make it absolute path relative to user's current working directory
+const userCwd = process.cwd();
 const installDir = process.argv[2] || './docs';
+const absoluteInstallDir = path.resolve(userCwd, installDir);
 
 console.log('Information Dense Keywords Dictionary Installer (npx)');
 console.log('===================================================\n');
@@ -22,8 +25,9 @@ if (!fs.existsSync(installScript)) {
 }
 
 try {
-    // Execute the install script
-    execSync(`bash "${installScript}" "${installDir}"`, {
+    // Execute the install script with absolute path for install directory
+    // but run from package root so it can find source files
+    execSync(`bash "${installScript}" "${absoluteInstallDir}"`, {
         stdio: 'inherit',
         cwd: projectRoot
     });
