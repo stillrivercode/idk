@@ -23,6 +23,7 @@ CUSTOM_DIR="test-custom-docs"
 cleanup() {
     echo -e "${YELLOW}Cleaning up test directories...${NC}"
     rm -rf "$TEST_DIR" "$CUSTOM_DIR"
+    # Note: We keep AI.md in the project root as it's part of the installation
 }
 
 # Set trap to cleanup on exit
@@ -31,11 +32,21 @@ trap cleanup EXIT
 echo "Test 1: Default installation to ./docs"
 echo "--------------------------------------"
 rm -rf docs  # Clean any existing docs
+rm -f AI.md  # Clean any existing AI.md
 ./install.sh
-if [ -f "docs/information-dense-keywords.md" ] && [ -d "docs/dictionary" ]; then
+if [ -f "docs/information-dense-keywords.md" ] && [ -d "docs/dictionary" ] && [ -f "AI.md" ]; then
     echo -e "${GREEN}✓ Test 1 passed: Default installation successful${NC}"
 else
     echo -e "${RED}✗ Test 1 failed: Default installation failed${NC}"
+    if [ ! -f "docs/information-dense-keywords.md" ]; then
+        echo -e "${RED}  Missing: docs/information-dense-keywords.md${NC}"
+    fi
+    if [ ! -d "docs/dictionary" ]; then
+        echo -e "${RED}  Missing: docs/dictionary${NC}"
+    fi
+    if [ ! -f "AI.md" ]; then
+        echo -e "${RED}  Missing: AI.md in project root${NC}"
+    fi
     exit 1
 fi
 
@@ -43,11 +54,21 @@ echo ""
 echo "Test 2: Custom directory installation"
 echo "------------------------------------"
 mkdir -p "$TEST_DIR"
+rm -f "$TEST_DIR/AI.md"  # Clean any existing AI.md
 ./install.sh "$TEST_DIR/my-docs"
-if [ -f "$TEST_DIR/my-docs/information-dense-keywords.md" ] && [ -d "$TEST_DIR/my-docs/dictionary" ]; then
+if [ -f "$TEST_DIR/my-docs/information-dense-keywords.md" ] && [ -d "$TEST_DIR/my-docs/dictionary" ] && [ -f "$TEST_DIR/AI.md" ]; then
     echo -e "${GREEN}✓ Test 2 passed: Custom directory installation successful${NC}"
 else
     echo -e "${RED}✗ Test 2 failed: Custom directory installation failed${NC}"
+    if [ ! -f "$TEST_DIR/my-docs/information-dense-keywords.md" ]; then
+        echo -e "${RED}  Missing: $TEST_DIR/my-docs/information-dense-keywords.md${NC}"
+    fi
+    if [ ! -d "$TEST_DIR/my-docs/dictionary" ]; then
+        echo -e "${RED}  Missing: $TEST_DIR/my-docs/dictionary${NC}"
+    fi
+    if [ ! -f "$TEST_DIR/AI.md" ]; then
+        echo -e "${RED}  Missing: $TEST_DIR/AI.md in project root${NC}"
+    fi
     exit 1
 fi
 
@@ -107,11 +128,31 @@ echo ""
 echo "Test 5: Installation with spaces in path"
 echo "---------------------------------------"
 mkdir -p "$CUSTOM_DIR/my docs with spaces"
+rm -f "$CUSTOM_DIR/AI.md"  # Clean any existing AI.md
 ./install.sh "$CUSTOM_DIR/my docs with spaces"
-if [ -f "$CUSTOM_DIR/my docs with spaces/information-dense-keywords.md" ] && [ -d "$CUSTOM_DIR/my docs with spaces/dictionary" ]; then
+if [ -f "$CUSTOM_DIR/my docs with spaces/information-dense-keywords.md" ] && [ -d "$CUSTOM_DIR/my docs with spaces/dictionary" ] && [ -f "$CUSTOM_DIR/AI.md" ]; then
     echo -e "${GREEN}✓ Test 5 passed: Installation with spaces in path successful${NC}"
 else
     echo -e "${RED}✗ Test 5 failed: Installation with spaces in path failed${NC}"
+    if [ ! -f "$CUSTOM_DIR/my docs with spaces/information-dense-keywords.md" ]; then
+        echo -e "${RED}  Missing: $CUSTOM_DIR/my docs with spaces/information-dense-keywords.md${NC}"
+    fi
+    if [ ! -d "$CUSTOM_DIR/my docs with spaces/dictionary" ]; then
+        echo -e "${RED}  Missing: $CUSTOM_DIR/my docs with spaces/dictionary${NC}"
+    fi
+    if [ ! -f "$CUSTOM_DIR/AI.md" ]; then
+        echo -e "${RED}  Missing: $CUSTOM_DIR/AI.md in project root${NC}"
+    fi
+    exit 1
+fi
+
+echo ""
+echo "Test 6: AI.md content validation"
+echo "--------------------------------"
+if grep -q "# AI.md - Shared Instructions for All AI Assistants" AI.md; then
+    echo -e "${GREEN}✓ Test 6 passed: AI.md content is valid${NC}"
+else
+    echo -e "${RED}✗ Test 6 failed: AI.md content is invalid${NC}"
     exit 1
 fi
 
@@ -124,6 +165,7 @@ echo "- Custom directory: ✓"
 echo "- File structure: ✓"
 echo "- Overwrite: ✓"
 echo "- Spaces in path: ✓"
+echo "- AI.md content: ✓"
 
 # Cleanup test directories (docs stays for user)
 rm -rf "$TEST_DIR" "$CUSTOM_DIR"

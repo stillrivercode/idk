@@ -38,17 +38,7 @@ npx @stillrivercode/information-dense-keywords /path/to/custom/docs
 
 ### For Teams & Organizations
 
-#### Option 1: Git Submodule
-
-```bash
-# Add as a submodule to your project
-git submodule add https://github.com/stillriver/idk.git docs/idk
-
-# Reference in your project documentation
-echo "See [IDK Dictionary](information-dense-keywords.md) for AI command reference" >> README.md
-```bash
-
-#### Option 2: Fork & Customize
+#### Fork & Customize
 
 ```bash
 # Fork the repository on GitHub
@@ -60,7 +50,7 @@ cd idk
 mkdir dictionary/custom
 # Add your team-specific commands to dictionary/custom/
 # Update information-dense-keywords.md with links to your custom commands
-```bash
+```
 
 ### For AI Assistant Developers
 
@@ -80,7 +70,7 @@ SELECT the authentication logic from auth.py
 CREATE a React login component
 FIX the validation error in user registration
 DELETE the unused styling files
-```bash
+```
 
 ### Advanced Commands
 
@@ -90,18 +80,18 @@ debug this memory leak in the payment processor
 optimize this query that's taking 10 seconds
 test this user service with comprehensive unit tests
 review this pull request for security vulnerabilities
-```bash
+```
 
 ### Command Chaining
 
 ```bash
 research this OAuth2 patterns then spec this authentication system then plan this implementation
 analyze this API performance then optimize this bottleneck then test this solution
-```bash
+```
 
 ## 📁 Dictionary Structure
 
-```bash
+```text
 information-dense-keywords.md     # Main index with links to all commands
 dictionary/
 ├── core/                        # SELECT, CREATE, DELETE, FIX
@@ -110,7 +100,7 @@ dictionary/
 ├── quality-assurance/          # test this, review this
 ├── workflow/                   # plan this, spec this
 └── git/                       # commit, push, pr, gh, comment
-```bash
+```
 
 ## 🎓 Learning Path
 
@@ -139,14 +129,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📋 Command Categories
 
-| Category | Commands | Purpose |
-|----------|----------|---------|
-| **Core** | SELECT, CREATE, DELETE, FIX | Basic operations |
-| **Development** | analyze this, debug this, optimize this | Code analysis & improvement |
-| **Documentation** | document this, explain this, research this | Knowledge creation |
-| **Quality Assurance** | test this, review this | Testing & validation |
-| **Workflow** | plan this, spec this | Project planning |
-| **Git** | commit, push, pr, gh, comment | Version control |
+| Category              | Commands                                    | Purpose                      |
+|-----------------------|---------------------------------------------|------------------------------|
+| **Core**              | SELECT, CREATE, DELETE, FIX                 | Basic operations             |
+| **Development**       | analyze this, debug this, optimize this     | Code analysis & improvement  |
+| **Documentation**     | document this, explain this, research this  | Knowledge creation           |
+| **Quality Assurance** | test this, review this                      | Testing & validation         |
+| **Workflow**          | plan this, spec this                        | Project planning             |
+| **Git**               | commit, push, pr, gh, comment               | Version control              |
 
 ## 🔗 Related Resources
 
