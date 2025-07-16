@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/stillrivercode/idk/compare/v1.5.0...v1.5.1) (2025-07-16)
+
+
+### Bug Fixes
+
+* correct AI.md copying when running installer from npm package ([#18](https://github.com/stillrivercode/idk/issues/18)) ([29f8a97](https://github.com/stillrivercode/idk/commit/29f8a97eb8717f4ce60b494722ff4a1617654968))
+
 # [1.5.0](https://github.com/stillrivercode/idk/compare/v1.4.0...v1.5.0) (2025-07-16)
 
 
