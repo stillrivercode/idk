@@ -57,7 +57,8 @@ cp -r "dictionary" "$INSTALL_DIR/"
 
 # Copy AI.md to project root (parent of install directory)
 echo "Copying AI.md to project root..."
-# Use realpath to handle edge cases and ensure we get the absolute parent path
+# Use realpath to resolve the absolute path of the parent directory ('project root').
+# This robustly handles cases like relative paths (e.g., './docs') or nested paths.
 PROJECT_ROOT=$(realpath "$INSTALL_DIR/..")
 cp "AI.md" "$PROJECT_ROOT/"
 

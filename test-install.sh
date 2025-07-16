@@ -149,10 +149,16 @@ fi
 echo ""
 echo "Test 6: AI.md content validation"
 echo "--------------------------------"
-if grep -q "# AI.md - Shared Instructions for All AI Assistants" AI.md; then
+if grep -q "# AI.md - Shared Instructions for All AI Assistants" AI.md && grep -q "Information Dense Keywords" AI.md; then
     echo -e "${GREEN}✓ Test 6 passed: AI.md content is valid${NC}"
 else
     echo -e "${RED}✗ Test 6 failed: AI.md content is invalid${NC}"
+    if ! grep -q "# AI.md - Shared Instructions for All AI Assistants" AI.md; then
+        echo -e "${RED}  Missing: AI.md header${NC}"
+    fi
+    if ! grep -q "Information Dense Keywords" AI.md; then
+        echo -e "${RED}  Missing: Information Dense Keywords content${NC}"
+    fi
     exit 1
 fi
 
