@@ -57,9 +57,8 @@ cp -r "dictionary" "$INSTALL_DIR/"
 
 # Copy AI.md to project root (parent of install directory)
 echo "Copying AI.md to project root..."
-# If INSTALL_DIR is ./docs, project root is ./
-# If INSTALL_DIR is /path/to/custom/docs, project root is /path/to/custom
-PROJECT_ROOT=$(dirname "$INSTALL_DIR")
+# Use realpath to handle edge cases and ensure we get the absolute parent path
+PROJECT_ROOT=$(realpath "$INSTALL_DIR/..")
 cp "AI.md" "$PROJECT_ROOT/"
 
 # Verify installation

@@ -167,6 +167,28 @@ else
 fi
 
 echo ""
+echo "Test 8: Top-level directory installation"
+echo "----------------------------------------"
+mkdir -p "$CUSTOM_DIR/my-project"
+rm -f "$CUSTOM_DIR/AI.md"  # Clean any existing AI.md
+./install.sh "$CUSTOM_DIR/my-project"
+if [ -f "$CUSTOM_DIR/my-project/information-dense-keywords.md" ] && [ -d "$CUSTOM_DIR/my-project/dictionary" ] && [ -f "$CUSTOM_DIR/AI.md" ]; then
+    echo -e "${GREEN}✓ Test 8 passed: Top-level directory installation successful${NC}"
+else
+    echo -e "${RED}✗ Test 8 failed: Top-level directory installation failed${NC}"
+    if [ ! -f "$CUSTOM_DIR/my-project/information-dense-keywords.md" ]; then
+        echo -e "${RED}  Missing: $CUSTOM_DIR/my-project/information-dense-keywords.md${NC}"
+    fi
+    if [ ! -d "$CUSTOM_DIR/my-project/dictionary" ]; then
+        echo -e "${RED}  Missing: $CUSTOM_DIR/my-project/dictionary${NC}"
+    fi
+    if [ ! -f "$CUSTOM_DIR/AI.md" ]; then
+        echo -e "${RED}  Missing: $CUSTOM_DIR/AI.md in project root${NC}"
+    fi
+    exit 1
+fi
+
+echo ""
 echo -e "${GREEN}All tests passed!${NC}"
 echo ""
 echo "Summary:"
@@ -177,6 +199,7 @@ echo "- Overwrite: ✓"
 echo "- Spaces in path: ✓"
 echo "- AI.md content: ✓"
 echo "- System directory protection: ✓"
+echo "- Top-level directory installation: ✓"
 
 # Cleanup test directories (docs stays for user)
 rm -rf "$TEST_DIR" "$CUSTOM_DIR"
