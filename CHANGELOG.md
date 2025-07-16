@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/stillrivercode/idk/compare/v1.2.1...v1.2.2) (2025-07-16)
+
+
+### Bug Fixes
+
+* install files to user's current working directory ([#14](https://github.com/stillrivercode/idk/issues/14)) ([7772c05](https://github.com/stillrivercode/idk/commit/7772c05598ef2eee810ad9d22822faeb9e5ea505))
+
 ## [1.2.1](https://github.com/stillrivercode/idk/compare/v1.2.0...v1.2.1) (2025-07-16)
 
 
