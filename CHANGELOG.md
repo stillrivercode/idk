@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/stillrivercode/idk/compare/v1.4.0...v1.5.0) (2025-07-16)
+
+
+### Features
+
+* update package.json files array to use consolidated AI.md ([#17](https://github.com/stillrivercode/idk/issues/17)) ([a14db09](https://github.com/stillrivercode/idk/commit/a14db09fef164f27ea822dc3c467c8da57e0fd96))
+
 # [1.4.0](https://github.com/stillrivercode/idk/compare/v1.3.0...v1.4.0) (2025-07-16)
 
 
