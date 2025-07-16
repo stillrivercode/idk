@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Capture the user's working directory BEFORE any other operations
+USER_DIR="$(pwd)"
+
 # Information Dense Keywords Dictionary Installer
 # This script installs the dictionary and index file to a docs/ directory
 
@@ -62,8 +65,6 @@ cp -r "dictionary" "$INSTALL_DIR/"
 
 # Copy AI.md to user's working directory (where user ran the command)
 echo "Copying AI.md to current directory..."
-# Get the directory where the user ran the command (not where the script is located)
-USER_DIR="$(pwd)"
 # Only copy if AI.md doesn't already exist in user's directory
 if [ ! -f "$USER_DIR/AI.md" ]; then
     echo "AI.md not found in current directory. Copying default version..."
