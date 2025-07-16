@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Capture the user's working directory BEFORE any other operations
-USER_DIR="$(pwd)"
-
 # Information Dense Keywords Dictionary Installer
 # This script installs the dictionary and index file to a docs/ directory
 
