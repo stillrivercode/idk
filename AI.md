@@ -53,10 +53,10 @@ Key files you'll work with:
 
 * `information-dense-keywords.md` - The core dictionary content
 * `README.md` - Project documentation and usage guide
-* `docs/roadmaps/` - Development priorities and future plans
-* `docs/plans/` - Plans for new features or changes
-* `docs/specs/` - Specifications for new features
-* `docs/research/` - Research documents
+* `docs/roadmaps/` - Directory for roadmap documents (e.g., `q4-roadmap.md`)
+* `docs/plans/` - Directory for planning documents (e.g., `new-feature-plan.md`)
+* `docs/specs/` - Directory for specifications (e.g., `api-spec-v2.md`)
+* `docs/research/` - Directory for research notes (e.g., `competitor-analysis.md`)
 * `examples/` - Usage examples and guides
 * `adrs/` - Architecture decision records
 * `AI.md` - This shared AI instruction file
@@ -65,10 +65,10 @@ Key files you'll work with:
 
 * [information-dense-keywords.md](information-dense-keywords.md) - The core command dictionary
 * [README.md](README.md) - Main project documentation
-* [docs/roadmaps/](docs/roadmaps/) - Development roadmap and priorities
-* [docs/plans/](docs/plans/) - Plans for new features or changes
-* [docs/specs/](docs/specs/) - Specifications for new features
-* [docs/research/](docs/research/) - Research documents
+* [docs/roadmaps/](docs/roadmaps/) - Directory for roadmap documents
+* [docs/plans/](docs/plans/) - Directory for planning documents
+* [docs/specs/](docs/specs/) - Directory for specifications
+* [docs/research/](docs/research/) - Directory for research notes
 * [examples/ai-usage-guide.md](examples/ai-usage-guide.md) - AI usage examples
 
 ## Core Principles

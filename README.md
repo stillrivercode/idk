@@ -157,6 +157,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 - [Architecture Decision Records](adrs/) - Design decisions and evolution
 - [Roadmap](docs/roadmaps/) - Future development plans
 
+*Note: Links to `docs/roadmaps/`, `docs/plans/`, etc., are conventions for AI assistants. These directories do not exist in the source repository but should be created in your local project clone.*
+
 ## 📄 License
 
 MIT License - free for personal and commercial use.
