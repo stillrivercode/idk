@@ -53,21 +53,23 @@ Key files you'll work with:
 
 * `information-dense-keywords.md` - The core dictionary content
 * `README.md` - Project documentation and usage guide
-* `docs/roadmaps/ROADMAP.md` - Development priorities and future plans
+* `docs/roadmaps/` - Directory for roadmap documents (e.g., `q4-roadmap.md`)
+* `docs/plans/` - Directory for planning documents (e.g., `new-feature-plan.md`)
+* `docs/specs/` - Directory for specifications (e.g., `api-spec-v2.md`)
+* `docs/research/` - Directory for research notes (e.g., `competitor-analysis.md`)
 * `examples/` - Usage examples and guides
 * `adrs/` - Architecture decision records
 * `AI.md` - This shared AI instruction file
-* `CLAUDE.md` - Claude-specific instructions
-* `GEMINI.md` - Gemini-specific instructions
 
 ## Cross-References
 
 * [information-dense-keywords.md](information-dense-keywords.md) - The core command dictionary
 * [README.md](README.md) - Main project documentation
-* [docs/roadmaps/ROADMAP.md](docs/roadmaps/ROADMAP.md) - Development roadmap and priorities
+* [docs/roadmaps/](docs/roadmaps/) - Directory for roadmap documents
+* [docs/plans/](docs/plans/) - Directory for planning documents
+* [docs/specs/](docs/specs/) - Directory for specifications
+* [docs/research/](docs/research/) - Directory for research notes
 * [examples/ai-usage-guide.md](examples/ai-usage-guide.md) - AI usage examples
-* [CLAUDE.md](CLAUDE.md) - Claude-specific context and instructions
-* [GEMINI.md](GEMINI.md) - Gemini-specific context and instructions
 
 ## Core Principles
 
@@ -80,4 +82,4 @@ Remember: This project focuses on creating a clear, actionable vocabulary for hu
 
 ## AI-Specific Considerations
 
-Each AI assistant should reference this file for common guidance, then refer to their specific instruction file (CLAUDE.md, GEMINI.md, etc.) for platform-specific considerations and capabilities.
+Each AI assistant should reference this file for common guidance, then refer to their specific instruction file for platform-specific considerations and capabilities.

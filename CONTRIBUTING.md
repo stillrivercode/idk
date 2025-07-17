@@ -27,9 +27,9 @@ The core dictionary is in [`information-dense-keywords.md`](information-dense-ke
 
 ### 3. AI Instructions
 
-- [`AI.md`](AI.md) contains shared instructions for all AI assistants
-- [`CLAUDE.md`](CLAUDE.md) and [`GEMINI.md`](GEMINI.md) contain model-specific guidance
-- Update these files when dictionary changes affect AI behavior
+- [`AI.md`](AI.md) contains shared instructions for all AI assistants.
+- For model-specific guidance, follow the pattern of `CLAUDE.md` and `GEMINI.md`.
+- Update these files when dictionary changes affect AI behavior.
 
 ## 🔧 Development Workflow
 
@@ -107,7 +107,7 @@ Good command definition:
 ## 📚 Resources
 
 - [AI Usage Guide](examples/ai-usage-guide.md) - How AIs should use the dictionary
-- [Project Roadmap](docs/roadmaps/ROADMAP.md) - Future development plans
+- [Project Roadmap](docs/roadmaps/) - Future development plans
 - [ADRs](adrs/) - Architectural decision records
 
 ## 📄 License

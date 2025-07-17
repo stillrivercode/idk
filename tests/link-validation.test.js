@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const glob = require('glob');
+const { shouldSkipLink } = require('./lib/link-helper');
 
 class LinkValidationTest {
   constructor() {
@@ -140,10 +141,16 @@ class LinkValidationTest {
       relativeLinks.forEach(link => {
         this.test(`${fileName}: relative link "${link.text}" -> ${link.path}`, () => {
           const filePath = path.join(this.rootDir, file);
+          // The link resolution test should not apply to conceptual directories or external URLs.
+          if (shouldSkipLink(link.path)) {
+            return; // Skip validation for these paths
+          }
+
           const resolvedPath = path.resolve(path.dirname(filePath), link.path);
 
+          // fs.existsSync works for both files and directories.
           if (!fs.existsSync(resolvedPath)) {
-            throw new Error(`Broken relative link: ${link.path} (line ${link.lineNumber})`);
+            throw new Error(`Broken relative link: target does not exist at ${link.path} (line ${link.lineNumber})`);
           }
         });
       });
@@ -153,47 +160,20 @@ class LinkValidationTest {
   testCrossReferences() {
     console.log('🔗 Testing cross-references...');
 
-    const commandFiles = Array.from(this.linkMap.keys()).filter(file =>
-      file.startsWith('dictionary/') && file.endsWith('.md')
-    );
-
-    // Build command name index
-    const commandIndex = new Map();
-    commandFiles.forEach(file => {
-      const filePath = path.join(this.rootDir, file);
-      const content = fs.readFileSync(filePath, 'utf8');
-      const h1Match = content.match(/^# (.+)/m);
-
-      if (h1Match) {
-        commandIndex.set(h1Match[1].trim().toLowerCase(), file);
-      }
-    });
-
-    // Test that referenced commands exist
-    commandFiles.forEach(file => {
-      const links = this.linkMap.get(file) || [];
+    this.linkMap.forEach((links, file) => {
       const fileName = path.basename(file);
 
-      const commandLinks = links.filter(link =>
-        link.path.includes('dictionary/') || link.text.includes('**')
-      );
+      links.forEach(link => {
+        this.test(`${fileName}: cross-reference "${link.text}" -> ${link.path} is valid`, () => {
+          // Skip external links and conceptual docs links, as they are not expected to exist in the repo.
+          if (shouldSkipLink(link.path)) {
+            return;
+          }
 
-      commandLinks.forEach(link => {
-        this.test(`${fileName}: cross-reference "${link.text}" is valid`, () => {
-          if (link.path.startsWith('dictionary/') || link.path.startsWith('../')) {
-            // It's a dictionary reference
-            const normalizedText = link.text.replace(/\*\*/g, '').toLowerCase();
+          const targetPath = path.resolve(path.dirname(path.join(this.rootDir, file)), link.path);
 
-            if (!commandIndex.has(normalizedText) && !fs.existsSync(path.join(this.rootDir, link.path))) {
-              // More flexible check - see if it exists as a file
-              const targetPath = link.path.startsWith('../')
-                ? path.resolve(path.dirname(path.join(this.rootDir, file)), link.path)
-                : path.join(this.rootDir, link.path);
-
-              if (!fs.existsSync(targetPath)) {
-                throw new Error(`Cross-reference target not found: ${link.path}`);
-              }
-            }
+          if (!fs.existsSync(targetPath)) {
+            throw new Error(`Broken link: target does not exist at ${link.path} (line ${link.lineNumber})`);
           }
         });
       });

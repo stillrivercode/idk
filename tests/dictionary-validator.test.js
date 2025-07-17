@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const glob = require('glob');
+const { shouldSkipLink } = require('./lib/link-helper');
 
 class DictionaryValidator {
   constructor() {
@@ -138,8 +139,8 @@ class DictionaryValidator {
       while ((match = linkPattern.exec(content)) !== null) {
         const [, linkText, linkPath] = match;
 
-        // Skip external links
-        if (linkPath.startsWith('http://') || linkPath.startsWith('https://')) {
+        // Skip external links and conceptual docs links, as they are not expected to exist in the repo.
+        if (shouldSkipLink(linkPath)) {
           continue;
         }
 

@@ -155,7 +155,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 - [AI Usage Guide](examples/ai-usage-guide.md) - Detailed implementation guidance
 - [Command Definitions](information-dense-keywords.md) - Complete command index
 - [Architecture Decision Records](adrs/) - Design decisions and evolution
-- [Roadmap](docs/roadmaps/ROADMAP.md) - Future development plans
+- [Roadmap](docs/roadmaps/) - Future development plans
+
+*Note: Links to `docs/roadmaps/`, `docs/plans/`, etc., are conventions for AI assistants. These directories do not exist in the source repository but should be created in your local project clone.*
 
 ## 📄 License
 
