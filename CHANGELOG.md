@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/stillrivercode/idk/compare/v1.7.0...v1.7.1) (2025-07-17)
+
+
+### Bug Fixes
+
+* remove duplicate Quick Reference section from README ([91106ff](https://github.com/stillrivercode/idk/commit/91106ff0aad4f3969844d9794066a26728404dfa))
+
 # [1.7.0](https://github.com/stillrivercode/idk/compare/v1.6.0...v1.7.0) (2025-07-17)
 
 
