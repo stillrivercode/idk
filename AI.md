@@ -53,23 +53,21 @@ Key files you'll work with:
 
 * `information-dense-keywords.md` - The core dictionary content
 * `README.md` - Project documentation and usage guide
-* `docs/roadmaps/` - Development priorities and future plans
-* `docs/plans/` - Plans for new features or changes
-* `docs/specs/` - Specifications for new features
-* `docs/research/` - Research documents
+* `docs/roadmaps/ROADMAP.md` - Development priorities and future plans
 * `examples/` - Usage examples and guides
 * `adrs/` - Architecture decision records
 * `AI.md` - This shared AI instruction file
+* `CLAUDE.md` - Claude-specific instructions
+* `GEMINI.md` - Gemini-specific instructions
 
 ## Cross-References
 
 * [information-dense-keywords.md](information-dense-keywords.md) - The core command dictionary
 * [README.md](README.md) - Main project documentation
-* [docs/roadmaps/](docs/roadmaps/) - Development roadmap and priorities
-* [docs/plans/](docs/plans/) - Plans for new features or changes
-* [docs/specs/](docs/specs/) - Specifications for new features
-* [docs/research/](docs/research/) - Research documents
+* [docs/roadmaps/ROADMAP.md](docs/roadmaps/ROADMAP.md) - Development roadmap and priorities
 * [examples/ai-usage-guide.md](examples/ai-usage-guide.md) - AI usage examples
+* [CLAUDE.md](CLAUDE.md) - Claude-specific context and instructions
+* [GEMINI.md](GEMINI.md) - Gemini-specific context and instructions
 
 ## Core Principles
 
@@ -82,4 +80,4 @@ Remember: This project focuses on creating a clear, actionable vocabulary for hu
 
 ## AI-Specific Considerations
 
-Each AI assistant should reference this file for common guidance, then refer to their specific instruction file for platform-specific considerations and capabilities.
+Each AI assistant should reference this file for common guidance, then refer to their specific instruction file (CLAUDE.md, GEMINI.md, etc.) for platform-specific considerations and capabilities.
