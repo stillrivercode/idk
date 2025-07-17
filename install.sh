@@ -50,12 +50,30 @@ show_help() {
 }
 
 # Parse command line arguments
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
-    exit 0
-fi
+INSTALL_DIR=""
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            # Assume the first non-flag argument is the directory
+            if [[ -z "$INSTALL_DIR" ]]; then
+                # Check that it doesn't look like a flag a user might have typo'd
+                if [[ "$arg" =~ ^- ]]; then
+                    echo -e "${RED}Error: Unknown option '$arg'${NC}"
+                    show_help
+                    exit 1
+                fi
+                INSTALL_DIR="$arg"
+            fi
+            ;;
+    esac
+done
 
-INSTALL_DIR="${1:-$DEFAULT_INSTALL_DIR}"
+# If no directory was provided, use the default
+INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 
 # Prevent installation in sensitive system directories
 if [[ "$INSTALL_DIR" == "/" || "$INSTALL_DIR" == "/etc" || "$INSTALL_DIR" == "/usr"* || "$INSTALL_DIR" == "/var"* || "$INSTALL_DIR" == "/bin"* || "$INSTALL_DIR" == "/sbin"* ]]; then
