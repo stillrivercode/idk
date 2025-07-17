@@ -15,17 +15,9 @@ A curated collection of action-oriented keywords organized in a modular structur
 - 🔧 **GitHub integration** with automated workflows and validation
 - 🛡️ **Quality assurance** with security scanning and emergency controls
 
-## 📦 Installation & Usage
+## 📦 Installation & Updates
 
-### 🤖 AI Assistant Configuration
-
-When you run the installer, a file named `AI.md` is copied to your installation directory (e.g., `docs/AI.md`). This file contains shared instructions and context for any AI assistant you use, ensuring it understands the project's conventions and the "Information Dense Keywords" command set.
-
-You are encouraged to customize this file with project-specific details.
-
-### For Individual Users
-
-#### Option 1: NPX Install (Recommended)
+### Individual Users
 
 ```bash
 # Install dictionary to docs/ directory
@@ -33,39 +25,64 @@ npx @stillrivercode/information-dense-keywords
 
 # Or install to custom directory
 npx @stillrivercode/information-dense-keywords /path/to/custom/docs
+
+# Show help
+npx @stillrivercode/information-dense-keywords --help
 ```
 
-#### Option 2: Online Reference
+### Teams & Organizations
 
-1. **View the dictionary on GitHub**: Visit [github.com/stillriver/idk](https://github.com/stillriver/idk)
-2. **Browse command definitions**: Navigate through the dictionary structure to find commands
-3. **Copy command syntax**: Use the exact command text when prompting your AI assistant
-4. **Example usage**: Tell your AI: `analyze this authentication system for security vulnerabilities`
+Add to your project's `package.json`:
 
-### For Teams & Organizations
+```json
+{
+  "dependencies": {
+    "@stillrivercode/information-dense-keywords": "^1.0.0"
+  },
+  "scripts": {
+    "idk:install": "npx @stillrivercode/information-dense-keywords",
+    "idk:update": "npm update @stillrivercode/information-dense-keywords"
+  }
+}
+```
 
-#### Fork & Customize
+Then run:
 
 ```bash
-# Fork the repository on GitHub
-# Clone your fork
-git clone https://github.com/YOUR_USERNAME/idk.git
-cd idk
-
-# Add your custom commands
-mkdir dictionary/custom
-# Add your team-specific commands to dictionary/custom/
-# Update information-dense-keywords.md with links to your custom commands
+npm install
+npm run idk:install
 ```
 
-### For AI Assistant Developers
+### AI Assistant Configuration
 
-#### Integration Instructions
+When you run the installer, a file named `AI.md` is copied to your installation directory (e.g., `docs/AI.md`). This file contains shared instructions and context for any AI assistant you use, ensuring it understands the project's conventions and the "Information Dense Keywords" command set.
 
-1. **Read the AI guidance**: [AI.md](AI.md), [CLAUDE.md](CLAUDE.md), [GEMINI.md](GEMINI.md)
-2. **Implement command recognition** using the definitions in `dictionary/`
-3. **Follow output formats** specified in each command definition
-4. **Support command chaining** as documented in the main index
+You are encouraged to customize this file with project-specific details.
+
+## 📋 Quick Reference
+
+| Command          | Purpose                           | Category           |
+|------------------|-----------------------------------|--------------------|
+| **SELECT**       | Information retrieval             | Core               |
+| **CREATE**       | Generate new assets               | Core               |
+| **DELETE**       | Remove assets                     | Core               |
+| **FIX**          | Debug and correct                 | Core               |
+| **analyze this** | Code analysis                     | Development        |
+| **debug this**   | Issue investigation               | Development        |
+| **optimize this**| Performance improvement           | Development        |
+| **document this**| Create documentation              | Documentation      |
+| **explain this** | Provide explanations              | Documentation      |
+| **research this**| Investigate topics                | Documentation      |
+| **test this**    | Generate tests                    | Quality Assurance  |
+| **review this**  | Code review                       | Quality Assurance  |
+| **plan this**    | Implementation planning           | Workflow           |
+| **spec this**    | Technical specifications          | Workflow           |
+| **roadmap**      | Strategic development roadmaps    | Workflow           |
+| **gh**           | GitHub operations                 | Git                |
+| **commit**       | Git commits                       | Git                |
+| **push**         | Push to remote                    | Git                |
+| **pr**           | Pull requests                     | Git                |
+| **comment**      | GitHub comments                   | Git                |
 
 ## 🚀 Quick Start Examples
 

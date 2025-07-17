@@ -14,7 +14,47 @@ NC='\033[0m' # No Color
 # Default installation directory
 DEFAULT_INSTALL_DIR="./docs"
 
+# Function to show help
+show_help() {
+    echo -e "${GREEN}Information Dense Keywords Dictionary Installer${NC}"
+    echo "================================================"
+    echo ""
+    echo "USAGE:"
+    echo "  $0 [DIRECTORY]"
+    echo "  $0 -h|--help"
+    echo ""
+    echo "DESCRIPTION:"
+    echo "  Installs the Information Dense Keywords Dictionary to a specified directory."
+    echo "  The dictionary includes the main reference file, command definitions, and AI instructions."
+    echo ""
+    echo "ARGUMENTS:"
+    echo "  DIRECTORY    Installation directory (default: $DEFAULT_INSTALL_DIR)"
+    echo ""
+    echo "OPTIONS:"
+    echo "  -h, --help   Show this help message and exit"
+    echo ""
+    echo "EXAMPLES:"
+    echo "  $0              # Install to default location (./docs)"
+    echo "  $0 ~/my-docs    # Install to custom directory"
+    echo "  $0 --help       # Show this help message"
+    echo ""
+    echo "INSTALLED FILES:"
+    echo "  - DIRECTORY/information-dense-keywords.md  # Main dictionary reference"
+    echo "  - DIRECTORY/dictionary/                   # Command definitions"
+    echo "  - DIRECTORY/AI.md                         # AI assistant instructions"
+    echo ""
+    echo "NOTES:"
+    echo "  - Installation in system directories (/etc, /usr, etc.) is not allowed"
+    echo "  - Existing files will be preserved and merged where appropriate"
+    echo "  - AI.md will only be copied if it doesn't already exist in the target directory"
+}
+
 # Parse command line arguments
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+    exit 0
+fi
+
 INSTALL_DIR="${1:-$DEFAULT_INSTALL_DIR}"
 
 # Prevent installation in sensitive system directories
