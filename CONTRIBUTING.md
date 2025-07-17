@@ -27,8 +27,9 @@ The core dictionary is in [`information-dense-keywords.md`](information-dense-ke
 
 ### 3. AI Instructions
 
-- [`AI.md`](AI.md) contains shared instructions for all AI assistants
-- Update this file when dictionary changes affect AI behavior
+- [`AI.md`](AI.md) contains shared instructions for all AI assistants.
+- For model-specific guidance, follow the pattern of `CLAUDE.md` and `GEMINI.md`.
+- Update these files when dictionary changes affect AI behavior.
 
 ## 🔧 Development Workflow
 

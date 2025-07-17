@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const glob = require('glob');
+const { shouldSkipLink } = require('./lib/link-helper');
 
 class LinkValidationTest {
   constructor() {
@@ -141,7 +142,7 @@ class LinkValidationTest {
         this.test(`${fileName}: relative link "${link.text}" -> ${link.path}`, () => {
           const filePath = path.join(this.rootDir, file);
           // The link resolution test should not apply to conceptual directories or external URLs.
-          if (link.path.startsWith('http') || link.path.startsWith('docs/')) {
+          if (shouldSkipLink(link.path)) {
             return; // Skip validation for these paths
           }
 
@@ -164,8 +165,9 @@ class LinkValidationTest {
 
       links.forEach(link => {
         this.test(`${fileName}: cross-reference "${link.text}" -> ${link.path} is valid`, () => {
-          if (link.path.startsWith('http') || link.path.startsWith('docs/')) {
-            return; // Skip external links and conceptual docs links
+          // Skip external links and conceptual docs links, as they are not expected to exist in the repo.
+          if (shouldSkipLink(link.path)) {
+            return;
           }
 
           const targetPath = path.resolve(path.dirname(path.join(this.rootDir, file)), link.path);
