@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/stillrivercode/idk/compare/v1.6.0...v1.7.0) (2025-07-17)
+
+
+### Features
+
+* add help command to installer and restructure README ([#20](https://github.com/stillrivercode/idk/issues/20)) ([c195c37](https://github.com/stillrivercode/idk/commit/c195c37804b75aaa7e03e637defbc2c03caa1972))
+
 # [1.6.0](https://github.com/stillrivercode/idk/compare/v1.5.1...v1.6.0) (2025-07-17)
 
 
