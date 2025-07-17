@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/stillrivercode/idk/compare/v1.5.1...v1.6.0) (2025-07-17)
+
+
+### Features
+
+* add formatted Quick Reference section to README and info-dense-keywords ([#19](https://github.com/stillrivercode/idk/issues/19)) ([c6c9518](https://github.com/stillrivercode/idk/commit/c6c951811b33c970c3c2513326f5c5a3643bbc62))
+
 ## [1.5.1](https://github.com/stillrivercode/idk/compare/v1.5.0...v1.5.1) (2025-07-16)
 
 
