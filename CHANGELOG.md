@@ -1,3 +1,10 @@
+## [1.7.2](https://github.com/stillrivercode/idk/compare/v1.7.1...v1.7.2) (2025-07-17)
+
+
+### Bug Fixes
+
+* remove duplicate Command Categories section from README ([3415ea6](https://github.com/stillrivercode/idk/commit/3415ea657963ba82cbbde334a7a803608e8430b2))
+
 ## [1.7.1](https://github.com/stillrivercode/idk/compare/v1.7.0...v1.7.1) (2025-07-17)
 
 
