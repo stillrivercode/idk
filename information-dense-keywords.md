@@ -73,28 +73,28 @@ Commands for project planning and specification.
 
 ## Quick Reference
 
-| Command | Purpose | Category |
-|---------|---------|----------|
-| SELECT | Information retrieval | Core |
-| CREATE | Generate new assets | Core |
-| DELETE | Remove assets | Core |
-| FIX | Debug and correct | Core |
-| analyze this | Code analysis | Development |
-| debug this | Issue investigation | Development |
-| optimize this | Performance improvement | Development |
-| document this | Create documentation | Documentation |
-| explain this | Provide explanations | Documentation |
-| research this | Investigate topics | Documentation |
-| test this | Generate tests | Quality Assurance |
-| review this | Code review | Quality Assurance |
-| plan this | Implementation planning | Workflow |
-| spec this | Technical specifications | Workflow |
-| roadmap | Strategic development roadmaps | Workflow |
-| gh | GitHub operations | Git |
-| commit | Git commits | Git |
-| push | Push to remote | Git |
-| pr | Pull requests | Git |
-| comment | GitHub comments | Git |
+| Command          | Purpose                           | Category           |
+|------------------|-----------------------------------|--------------------|
+| **SELECT**       | Information retrieval             | Core               |
+| **CREATE**       | Generate new assets               | Core               |
+| **DELETE**       | Remove assets                     | Core               |
+| **FIX**          | Debug and correct                 | Core               |
+| **analyze this** | Code analysis                     | Development        |
+| **debug this**   | Issue investigation               | Development        |
+| **optimize this**| Performance improvement           | Development        |
+| **document this**| Create documentation              | Documentation      |
+| **explain this** | Provide explanations              | Documentation      |
+| **research this**| Investigate topics                | Documentation      |
+| **test this**    | Generate tests                    | Quality Assurance  |
+| **review this**  | Code review                       | Quality Assurance  |
+| **plan this**    | Implementation planning           | Workflow           |
+| **spec this**    | Technical specifications          | Workflow           |
+| **roadmap**      | Strategic development roadmaps    | Workflow           |
+| **gh**           | GitHub operations                 | Git                |
+| **commit**       | Git commits                       | Git                |
+| **push**         | Push to remote                    | Git                |
+| **pr**           | Pull requests                     | Git                |
+| **comment**      | GitHub comments                   | Git                |
 
 ---
 
