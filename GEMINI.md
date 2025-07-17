@@ -15,5 +15,5 @@ This file provides Gemini-specific guidance when working with the Information De
 
 - [AI.md](AI.md) - Shared instructions for all AI assistants
 - [information-dense-keywords.md](information-dense-keywords.md) - The core command dictionary
-- [docs/roadmaps/ROADMAP.md](docs/roadmaps/ROADMAP.md) - Development roadmap and priorities
+- [docs/roadmaps/](docs/roadmaps/) - Development roadmap and priorities
 - [CLAUDE.md](CLAUDE.md) - Claude-specific context and instructions

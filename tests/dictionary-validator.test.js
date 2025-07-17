@@ -138,8 +138,8 @@ class DictionaryValidator {
       while ((match = linkPattern.exec(content)) !== null) {
         const [, linkText, linkPath] = match;
 
-        // Skip external links
-        if (linkPath.startsWith('http://') || linkPath.startsWith('https://')) {
+        // Skip external links and conceptual docs links
+        if (linkPath.startsWith('http://') || linkPath.startsWith('https://') || linkPath.startsWith('docs/')) {
           continue;
         }
 

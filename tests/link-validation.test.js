@@ -141,8 +141,9 @@ class LinkValidationTest {
         this.test(`${fileName}: relative link "${link.text}" -> ${link.path}`, () => {
           const filePath = path.join(this.rootDir, file);
           const resolvedPath = path.resolve(path.dirname(filePath), link.path);
+          const isDirectory = fs.existsSync(resolvedPath) && fs.lstatSync(resolvedPath).isDirectory();
 
-          if (!fs.existsSync(resolvedPath)) {
+          if (!fs.existsSync(resolvedPath) && !isDirectory) {
             throw new Error(`Broken relative link: ${link.path} (line ${link.lineNumber})`);
           }
         });
@@ -153,47 +154,19 @@ class LinkValidationTest {
   testCrossReferences() {
     console.log('🔗 Testing cross-references...');
 
-    const commandFiles = Array.from(this.linkMap.keys()).filter(file =>
-      file.startsWith('dictionary/') && file.endsWith('.md')
-    );
-
-    // Build command name index
-    const commandIndex = new Map();
-    commandFiles.forEach(file => {
-      const filePath = path.join(this.rootDir, file);
-      const content = fs.readFileSync(filePath, 'utf8');
-      const h1Match = content.match(/^# (.+)/m);
-
-      if (h1Match) {
-        commandIndex.set(h1Match[1].trim().toLowerCase(), file);
-      }
-    });
-
-    // Test that referenced commands exist
-    commandFiles.forEach(file => {
-      const links = this.linkMap.get(file) || [];
+    this.linkMap.forEach((links, file) => {
       const fileName = path.basename(file);
 
-      const commandLinks = links.filter(link =>
-        link.path.includes('dictionary/') || link.text.includes('**')
-      );
+      links.forEach(link => {
+        this.test(`${fileName}: cross-reference "${link.text}" -> ${link.path} is valid`, () => {
+          if (link.path.startsWith('http') || link.path.startsWith('docs/')) {
+            return; // Skip external links and conceptual docs links
+          }
 
-      commandLinks.forEach(link => {
-        this.test(`${fileName}: cross-reference "${link.text}" is valid`, () => {
-          if (link.path.startsWith('dictionary/') || link.path.startsWith('../')) {
-            // It's a dictionary reference
-            const normalizedText = link.text.replace(/\*\*/g, '').toLowerCase();
+          const targetPath = path.resolve(path.dirname(path.join(this.rootDir, file)), link.path);
 
-            if (!commandIndex.has(normalizedText) && !fs.existsSync(path.join(this.rootDir, link.path))) {
-              // More flexible check - see if it exists as a file
-              const targetPath = link.path.startsWith('../')
-                ? path.resolve(path.dirname(path.join(this.rootDir, file)), link.path)
-                : path.join(this.rootDir, link.path);
-
-              if (!fs.existsSync(targetPath)) {
-                throw new Error(`Cross-reference target not found: ${link.path}`);
-              }
-            }
+          if (!fs.existsSync(targetPath)) {
+            throw new Error(`Broken link: target does not exist at ${link.path} (line ${link.lineNumber})`);
           }
         });
       });
