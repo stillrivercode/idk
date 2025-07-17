@@ -150,17 +150,6 @@ We welcome contributions! Here's how to help:
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-## 📋 Command Categories
-
-| Category              | Commands                                    | Purpose                      |
-|-----------------------|---------------------------------------------|------------------------------|
-| **Core**              | SELECT, CREATE, DELETE, FIX                 | Basic operations             |
-| **Development**       | analyze this, debug this, optimize this     | Code analysis & improvement  |
-| **Documentation**     | document this, explain this, research this  | Knowledge creation           |
-| **Quality Assurance** | test this, review this                      | Testing & validation         |
-| **Workflow**          | plan this, spec this                        | Project planning             |
-| **Git**               | commit, push, pr, gh, comment               | Version control              |
-
 ## 🔗 Related Resources
 
 - [AI Usage Guide](examples/ai-usage-guide.md) - Detailed implementation guidance
