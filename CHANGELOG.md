@@ -1,3 +1,10 @@
+## [1.7.3](https://github.com/stillrivercode/idk/compare/v1.7.2...v1.7.3) (2025-07-25)
+
+
+### Bug Fixes
+
+* add help flag support to npx installer ([#22](https://github.com/stillrivercode/idk/issues/22)) ([325aaf7](https://github.com/stillrivercode/idk/commit/325aaf79872652529aff94ecad435635cb54eea0))
+
 ## [1.7.2](https://github.com/stillrivercode/idk/compare/v1.7.1...v1.7.2) (2025-07-17)
 
 
