@@ -9,6 +9,23 @@ const scriptDir = __dirname;
 const projectRoot = path.dirname(scriptDir);
 const installScript = path.join(projectRoot, 'install.sh');
 
+// Check for help flag first
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log('Information Dense Keywords Dictionary Installer (npx)');
+    console.log('===================================================\n');
+    console.log('Usage: npx @stillrivercode/information-dense-keywords [directory]');
+    console.log('');
+    console.log('Options:');
+    console.log('  directory    Installation directory (default: ./docs)');
+    console.log('  --help, -h   Show this help message');
+    console.log('');
+    console.log('Examples:');
+    console.log('  npx @stillrivercode/information-dense-keywords');
+    console.log('  npx @stillrivercode/information-dense-keywords ./my-docs');
+    console.log('  npx @stillrivercode/information-dense-keywords /absolute/path');
+    process.exit(0);
+}
+
 // Get installation directory from command line args or use default
 // Make it absolute path relative to user's current working directory
 const userCwd = process.cwd();
