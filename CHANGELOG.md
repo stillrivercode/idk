@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/stillrivercode/idk/compare/v1.7.4...v1.8.0) (2025-07-29)
+
+
+### Features
+
+* integrate stillriver-ai-workflows action ([#25](https://github.com/stillrivercode/idk/issues/25)) ([a52c522](https://github.com/stillrivercode/idk/commit/a52c52219761b611a0094ee3e5260265b7d3194a))
+
 ## [1.7.4](https://github.com/stillrivercode/idk/compare/v1.7.3...v1.7.4) (2025-07-29)
 
 
