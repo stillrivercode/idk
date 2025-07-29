@@ -50,7 +50,7 @@ The action is configured with the following inputs:
     temperature: 0.7
     request_timeout_seconds: 600
     retries: 3
-    post_comment: 'false'  # We handle comment posting for better control
+    post_comment: 'true'  # Let the action handle resolvable comments
 ```
 
 ## Required Secrets
@@ -70,12 +70,13 @@ The action is configured with the following inputs:
    - When the `ai-review-needed` label is added
    - When someone comments `/review` (if implemented)
 
-2. The action performs the review and provides outputs:
-   - `review_comment`: The AI-generated review content
-   - `review_status`: Status of the review (success, failure, error)
+2. The action performs the review and posts resolvable comments directly:
+   - Creates GitHub's native resolvable suggestions when confidence ≥95%
+   - Posts enhanced recommendations for confidence 80-94%
+   - Posts regular comments for confidence 65-79%
+   - Suppresses suggestions with confidence <65%
 
 3. Post-processing steps handle:
-   - Comment posting with custom formatting
    - Label management based on review content
    - Error handling and user notifications
 
@@ -83,11 +84,12 @@ The action is configured with the following inputs:
 
 - Removed Python setup and dependency installation steps
 - Removed custom review prompt generation and API script
+- Removed custom comment posting to enable native resolvable suggestions
 - Simplified error handling to use action outputs
 - Maintained all existing workflow triggers and conditions
-- Preserved custom comment formatting and label logic
+- Preserved label management logic
 - Updated rate limit check to use configurable `AI_REVIEW_RATE_LIMIT_MINUTES`
-- Added support for inline comments via `AI_ENABLE_INLINE_COMMENTS`
+- Enabled resolvable comments via `AI_ENABLE_INLINE_COMMENTS` and `post_comment: true`
 
 ## Future Enhancements
 
