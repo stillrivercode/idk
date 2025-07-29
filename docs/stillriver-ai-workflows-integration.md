@@ -1,0 +1,92 @@
+# Stillriver AI Workflows Integration
+
+## Overview
+
+This document describes the integration of the [stillriver-ai-workflows](https://github.com/stillrivercode/stillriver-ai-workflows) GitHub Action into the IDK project, replacing the custom OpenRouter API implementation in the AI PR review workflow.
+
+## What Changed
+
+### Before
+
+The `ai-pr-review.yml` workflow used:
+
+- Custom Python script to call OpenRouter API directly
+- Manual handling of API requests, timeouts, and retries
+- Custom review comment formatting
+- Direct file I/O for managing review outputs
+
+### After
+
+The workflow now uses:
+
+- The `stillrivercode/stillriver-ai-workflows@v1` action
+- Standardized API handling through the action
+- Action-provided outputs for review content and status
+- Simplified error handling
+
+## Key Benefits
+
+1. **Simplified Maintenance**: No need to maintain custom Python scripts for API interactions
+2. **Standardized Implementation**: Uses a shared action that can be updated independently
+3. **Better Error Handling**: The action provides structured status outputs
+4. **Native GitHub Integration**: Designed specifically for GitHub PR reviews
+5. **Resolvable Suggestions**: The action supports GitHub's native suggestion format
+
+## Configuration
+
+The action is configured with the following inputs:
+
+```yaml
+- uses: stillrivercode/stillriver-ai-workflows@v1
+  with:
+    github_token: ${{ github.token }}
+    openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
+    model: ${{ vars.AI_MODEL || 'anthropic/claude-sonnet-4' }}
+    review_type: 'full'
+    max_tokens: 4096
+    temperature: 0.7
+    request_timeout_seconds: 600
+    retries: 3
+    post_comment: 'false'  # We handle comment posting for better control
+```
+
+## Required Secrets
+
+- `OPENROUTER_API_KEY`: Your OpenRouter API key (already configured)
+
+## Optional Variables
+
+- `AI_MODEL`: The AI model to use (defaults to `anthropic/claude-sonnet-4`)
+
+## Workflow Behavior
+
+1. The workflow triggers remain the same:
+   - When a PR is opened
+   - When the `ai-review-needed` label is added
+   - When someone comments `/review` (if implemented)
+
+2. The action performs the review and provides outputs:
+   - `review_comment`: The AI-generated review content
+   - `review_status`: Status of the review (success, failure, error)
+
+3. Post-processing steps handle:
+   - Comment posting with custom formatting
+   - Label management based on review content
+   - Error handling and user notifications
+
+## Migration Notes
+
+- Removed Python setup and dependency installation steps
+- Removed custom review prompt generation and API script
+- Simplified error handling to use action outputs
+- Maintained all existing workflow triggers and conditions
+- Preserved custom comment formatting and label logic
+
+## Future Enhancements
+
+The stillriver-ai-workflows action supports additional features that could be enabled:
+
+- Custom review rules via JSON configuration
+- File exclusion patterns
+- Automatic comment posting with resolvable suggestions
+- Different review types (security, performance, etc.)
