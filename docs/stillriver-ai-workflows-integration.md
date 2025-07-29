@@ -38,6 +38,9 @@ The action is configured with the following inputs:
 
 ```yaml
 - uses: stillrivercode/stillriver-ai-workflows@v1
+  env:
+    AI_REVIEW_RATE_LIMIT_MINUTES: ${{ vars.AI_REVIEW_RATE_LIMIT_MINUTES || '1' }}
+    AI_ENABLE_INLINE_COMMENTS: ${{ vars.AI_ENABLE_INLINE_COMMENTS || 'true' }}
   with:
     github_token: ${{ github.token }}
     openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
@@ -57,6 +60,8 @@ The action is configured with the following inputs:
 ## Optional Variables
 
 - `AI_MODEL`: The AI model to use (defaults to `anthropic/claude-sonnet-4`)
+- `AI_REVIEW_RATE_LIMIT_MINUTES`: Rate limit window for reviews (defaults to `1` minute)
+- `AI_ENABLE_INLINE_COMMENTS`: Enable GitHub's native inline suggestions (defaults to `true`)
 
 ## Workflow Behavior
 
@@ -81,6 +86,8 @@ The action is configured with the following inputs:
 - Simplified error handling to use action outputs
 - Maintained all existing workflow triggers and conditions
 - Preserved custom comment formatting and label logic
+- Updated rate limit check to use configurable `AI_REVIEW_RATE_LIMIT_MINUTES`
+- Added support for inline comments via `AI_ENABLE_INLINE_COMMENTS`
 
 ## Future Enhancements
 

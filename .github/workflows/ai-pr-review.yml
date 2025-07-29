@@ -72,6 +72,8 @@ jobs:
       - name: Check for recent AI review
         id: check_recent_review
         uses: actions/github-script@v7
+        env:
+          RATE_LIMIT_MINUTES: ${{ vars.AI_REVIEW_RATE_LIMIT_MINUTES || '1' }}
         with:
           github-token: ${{ github.token }}
           script: |
@@ -82,16 +84,18 @@ jobs:
               per_page: 100
             });
 
-            // Check if there's a recent AI review (within last 5 minutes)
-            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            // Check if there's a recent AI review (within rate limit window)
+            const rateLimitMinutes = parseInt(process.env.RATE_LIMIT_MINUTES) || 1;
+            const rateLimitMs = rateLimitMinutes * 60 * 1000;
+            const rateLimitAgo = new Date(Date.now() - rateLimitMs);
             const recentAIReview = comments.data.find(comment =>
               comment.user.login === 'github-actions[bot]' &&
               comment.body.includes('🤖 AI Review') &&
-              new Date(comment.created_at) > fiveMinutesAgo
+              new Date(comment.created_at) > rateLimitAgo
             );
 
             if (recentAIReview) {
-              console.log('Recent AI review found, skipping to prevent spam');
+              console.log(`Recent AI review found within ${rateLimitMinutes} minute(s), skipping to prevent spam`);
               core.setOutput('skip', 'true');
             } else {
               core.setOutput('skip', 'false');
@@ -172,6 +176,9 @@ jobs:
         if: (steps.check_tests.outputs.result == 'true' || github.event_name != 'pull_request') && steps.check_recent_review.outputs.skip != 'true'
         id: ai_review
         uses: stillrivercode/stillriver-ai-workflows@v1
+        env:
+          AI_REVIEW_RATE_LIMIT_MINUTES: ${{ vars.AI_REVIEW_RATE_LIMIT_MINUTES || '1' }}
+          AI_ENABLE_INLINE_COMMENTS: ${{ vars.AI_ENABLE_INLINE_COMMENTS || 'true' }}
         with:
           github_token: ${{ github.token }}
           openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
