@@ -177,7 +177,6 @@ jobs:
         id: ai_review
         uses: stillrivercode/stillriver-ai-workflows@v1
         env:
-          AI_REVIEW_RATE_LIMIT_MINUTES: ${{ vars.AI_REVIEW_RATE_LIMIT_MINUTES || '1' }}
           AI_ENABLE_INLINE_COMMENTS: ${{ vars.AI_ENABLE_INLINE_COMMENTS || 'true' }}
         with:
           github_token: ${{ github.token }}
