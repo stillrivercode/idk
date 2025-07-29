@@ -1,3 +1,10 @@
+## [1.7.4](https://github.com/stillrivercode/idk/compare/v1.7.3...v1.7.4) (2025-07-29)
+
+
+### Bug Fixes
+
+* remove unsupported env variable usage in timeout-minutes ([#23](https://github.com/stillrivercode/idk/issues/23)) ([f6bc8ed](https://github.com/stillrivercode/idk/commit/f6bc8eda5dc7903ec13e23d108f811e5ccb2c11c))
+
 ## [1.7.3](https://github.com/stillrivercode/idk/compare/v1.7.2...v1.7.3) (2025-07-25)
 
 
