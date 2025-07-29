@@ -1,9 +1,5 @@
 name: Emergency Controls
 
-# Centralized timeout configuration
-env:
-  EMERGENCY_TIMEOUT_MINUTES: 10
-
 on:
   workflow_dispatch:
     inputs:
@@ -61,7 +57,9 @@ jobs:
     needs: verify-authorization
     if: needs.verify-authorization.outputs.authorized == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ fromJSON(env.EMERGENCY_TIMEOUT_MINUTES) }}
+    # Note: timeout-minutes doesn't support env variables at job level
+    # If you need to change this, update the value here
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
