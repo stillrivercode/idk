@@ -6,15 +6,24 @@
 
 ## Parameters
 
-- **`--from <current_version>`**: (Required) The current version of the technology being used (e.g., `react@17.0.0`, `python@3.8`).
-- **`--to <target_version>`**: (Required) The target version to migrate to (e.g., `react@18.2.0`, `python@3.11`).
-- **`--tech <technology_name>`**: (Required) The name of the technology being migrated (e.g., `React`, `Python`, `Django`).
+- **`--from <current_version>`**: (Required) The current version of the technology being used. Version format should be as specific as possible (e.g., `2.7.0`, `17.0.0`, `3.8`) and may follow semantic versioning where applicable. The accepted format is dependent on the specified `--tech`.
+- **`--to <target_version>`**: (Required) The target version to migrate to. Use the same format as `--from` for consistency.
+- **`--tech <technology_name>`**: (Required) The name of the technology being migrated (e.g., `SpringBoot`, `Python`, `Django`, `React`).
 - **`--repo <path_to_repo>`**: (Optional) The path to the repository to be migrated. If not provided, the current directory is assumed.
-- **`--phases <number>`**: (Optional) Number of phases to break the migration into (default: 3). Useful for large migrations.
+- **`--phases <number>`**: (Optional) Number of phases to break the migration into (default: 3).
+  Specifying more than the default will generate additional placeholder phase sections in the plan,
+  allowing teams to manually break down complex tasks further. Useful for large migrations requiring
+  more granular planning.
 
 ## Description
 
 The `migrate` command analyzes the requirements for a technology migration and generates a comprehensive, phased migration plan. This approach breaks down complex migrations into manageable phases, reducing risk and allowing for incremental progress with validation checkpoints.
+
+**Important Note:** The generated plan is a comprehensive template based on our knowledge base
+for the specified technology and established best practices. It is designed to be a powerful
+starting point, but it requires careful review and adaptation by the development team to fit
+the unique complexities of their codebase. The tool serves as an aid to guide the migration
+process, not as a replacement for engineering expertise.
 
 The generated plan will be a markdown document that includes:
 
@@ -22,10 +31,10 @@ The generated plan will be a markdown document that includes:
     - Executive summary of the migration scope and timeline
     - Risk assessment and mitigation strategies
     - Phase breakdown with clear success criteria for each phase
-    - Automated search for official migration guides and release notes
+    - Inclusion of links to official migration guides, release notes, and relevant documentation
 
 2. **Pre-migration Preparation:**
-    - Identification of known breaking changes between the specified versions
+    - A checklist of common breaking changes and deprecated APIs, compiled from official release notes, to guide the team's impact analysis
     - A checklist for creating a baseline (e.g., ensuring the current test suite is green, performance benchmarking)
     - Team communication and coordination requirements
     - Rollback strategy and contingency planning
@@ -67,7 +76,7 @@ The generated plan will be a markdown document that includes:
 ## 📋 Migration Overview & Strategy
 
 **Migration Scope:** Spring Boot framework upgrade from 2.7.0 to 3.2.0
-**Estimated Timeline:** 4-6 weeks (depending on codebase size and dependencies)
+**Estimated Timeline:** 4-6 weeks (Note: This is a rough estimate. Please adjust based on your team's capacity and the specific complexity of the repository)
 **Risk Level:** High (major version upgrade with Jakarta EE namespace changes)
 
 ### Phase Breakdown
@@ -90,7 +99,8 @@ The generated plan will be a markdown document that includes:
 - [ ] Record baseline performance metrics (startup time, memory usage, response times)
 - [ ] Document current Spring Boot configuration and custom beans
 - [ ] Audit all dependencies for Spring Boot 3.x compatibility
-- [ ] Create migration branch: `git checkout -b feat/spring-boot-3-upgrade`
+- [ ] Create a dedicated migration branch: `git checkout -b feat/spring-boot-3-upgrade`
+- [ ] Create a baseline backup branch from the starting commit: `git branch backup/spring-boot-2-baseline` for emergency rollbacks
 
 ### 📚 Breaking Changes & Official Guides
 - **Official Spring Boot 3.0 Migration Guide:** [https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide)
@@ -119,6 +129,12 @@ The generated plan will be a markdown document that includes:
    # Update to Java 17 (minimum requirement for Spring Boot 3.x)
    # Update JAVA_HOME and build configuration
    ```
+
+1. **Update Environment Configuration:**
+   - [ ] Ensure all developers have JDK 17 installed and configured in their IDEs
+   - [ ] Update `JAVA_HOME` environment variables on all development machines
+   - [ ] Update CI/CD pipeline configurations (e.g., `Jenkinsfile`, `gitlab-ci.yml`, GitHub Actions) to use a JDK 17 build environment
+   - [ ] Update Docker base images if applicable to use Java 17
 
 1. **Dependency Analysis:**
 
@@ -194,14 +210,27 @@ The generated plan will be a markdown document that includes:
 3. **Update Spring Security Configuration:**
 
    ```java
-   // Update security configuration for Spring Security 6.0
+   // Before (Using deprecated WebSecurityConfigurerAdapter)
+   // @Configuration
+   // public class SecurityConfig extends WebSecurityConfigurerAdapter {
+   //     @Override
+   //     protected void configure(HttpSecurity http) throws Exception {
+   //         http.authorizeRequests().anyRequest().authenticated().and().formLogin();
+   //     }
+   // }
+
+   // After (Using SecurityFilterChain bean - Spring Security 6.x+)
    @Configuration
    @EnableWebSecurity
    public class SecurityConfig {
 
        @Bean
        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-           // Updated configuration syntax
+           http
+               .authorizeHttpRequests(authorize -> authorize
+                   .anyRequest().authenticated()
+               )
+               .formLogin(Customizer.withDefaults());
            return http.build();
        }
    }
@@ -327,9 +356,9 @@ git checkout backup/spring-boot-2-baseline
 
 ### Partial Rollback by Phase
 
-- **Phase 3 Rollback:** `git revert <phase-3-commits>`
-- **Phase 2 Rollback:** `git reset --hard <phase-1-completion-commit>`
-- **Phase 1 Rollback:** `git reset --hard <pre-migration-commit>`
+- **Phase 3 Rollback:** `git revert <phase-3-commits>` (safer for shared branches)
+- **Phase 2 Rollback:** `git checkout backup/spring-boot-2-baseline && git reset --soft <phase-1-completion-commit>` (preserves uncommitted work)
+- **Phase 1 Rollback:** `git checkout backup/spring-boot-2-baseline` (complete rollback to baseline)
 
 ### Data Recovery
 
