@@ -365,5 +365,3 @@ git checkout backup/spring-boot-2-baseline
 - Restore database from pre-migration backup
 - Configuration backups stored in `./migration-backups/`
 - Revert infrastructure changes if applicable
-
-```bash
