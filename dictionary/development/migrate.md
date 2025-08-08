@@ -207,6 +207,8 @@ The generated plan will be a markdown document that includes:
    import jakarta.validation.constraints.NotNull;
    ```
 
+   **Note:** Modern IDEs like IntelliJ IDEA Ultimate provide powerful, automated refactoring tools for this namespace migration that can handle complex cases more safely than manual find-and-replace operations.
+
 3. **Update Spring Security Configuration:**
 
    ```java
@@ -261,7 +263,7 @@ The generated plan will be a markdown document that includes:
 - [ ] All REST endpoints function correctly
 - [ ] Database connections and transactions work
 - [ ] Security configuration is functional
-- [ ] Test suite passes with >95% success rate
+- [ ] Test suite passes with 100% success rate (any failing tests must be either fixed or consciously deprecated/removed as part of the migration effort)
 - [ ] No deprecated API warnings
 
 **Phase 2 Rollback:** Revert to Phase 1 state and downgrade Spring Boot version
@@ -363,5 +365,5 @@ git checkout backup/spring-boot-2-baseline
 ### Data Recovery
 
 - Restore database from pre-migration backup
-- Configuration backups stored in `./migration-backups/`
+- Configuration backups stored in `./migration-backups/` (**Security Warning:** Ensure this directory is added to `.gitignore` to prevent accidentally committing sensitive information like secrets or credentials)
 - Revert infrastructure changes if applicable
