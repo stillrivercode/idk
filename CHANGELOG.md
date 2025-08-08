@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/stillrivercode/idk/compare/v1.8.0...v1.9.0) (2025-08-08)
+
+
+### Features
+
+* **dev:** add migrate command definition ([#24](https://github.com/stillrivercode/idk/issues/24)) ([9c5c784](https://github.com/stillrivercode/idk/commit/9c5c78416ae2434ba4b55292fd2e06d2b1dc2d3a))
+
 # [1.8.0](https://github.com/stillrivercode/idk/compare/v1.7.4...v1.8.0) (2025-07-29)
 
 
